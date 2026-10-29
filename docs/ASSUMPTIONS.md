@@ -262,3 +262,22 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   Confidence otherwise = the tool's classifier confidence. Write and network tools are not
   flagged yet. A tool that is auto-approved on a server declared `approval_gate: true` in
   agent.yaml raises severity one level (medium→high, high→critical).
+
+## Reports (`apl scan`)
+
+- **R9 [SPEC] SARIF 2.1.0 — verified.** Output for the clean and dirty fixtures validates with 0
+  errors against the official JSON schema (draft-07), checked 2026-10-29 with `jsonschema` in a
+  scratch environment, not as a project dependency. Source:
+  https://json.schemastore.org/sarif-2.1.0.json (spec:
+  https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html). The first validation caught
+  `logicalLocations` on the result object; it belongs inside `locations[]`. Fixed. Mapping:
+  critical/high → error, medium → warning, low/info → note; `review_required` → note. Skips →
+  `invocations[0].toolExecutionNotifications`. Evidence is a JSON pointer, not a line, so results
+  carry only `artifactLocation.uri` (relative path, or a `file://` URI when absolute) plus
+  `properties.jsonPointer`. Findings without evidence fall back to their server's config entry.
+  The schema is not re-validated in CI (no `jsonschema` dependency); tests check structure.
+- **R10 [HEURISTIC] JSON report.** `schema_version: "1.0"`, with top-level keys pinned by a
+  test. Bump the major version on removed or renamed keys or changed types; adding keys is minor.
+- **R11 [HEURISTIC] Exit codes.** 0 = no finding at or above `--fail-on` (default `none`); 1 = at
+  least one; 2 = parse error, write error or `--connect`. `review_required` findings count toward
+  `--fail-on` at their own severity (APL-007 reviews are low).

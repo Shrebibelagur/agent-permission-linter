@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from apl.report.json_report import render_json
 from apl.report.markdown import render_markdown
+from apl.report.sarif import render_sarif
 from apl.scan import ScanReport
+
+RENDERERS = {"md": render_markdown, "json": render_json, "sarif": render_sarif}
 
 
 def render(report: ScanReport, fmt: str) -> str:
-    if fmt == "md":
-        return render_markdown(report)
-    raise ValueError(f"unsupported format: {fmt}")
+    try:
+        return RENDERERS[fmt](report)
+    except KeyError:
+        raise ValueError(f"unsupported format: {fmt}") from None

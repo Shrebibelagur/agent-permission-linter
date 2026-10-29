@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 REDACTED = "***REDACTED***"
@@ -72,6 +73,17 @@ def redact(value: str) -> str:
     for p in _PATTERNS:
         out = p.sub(REDACTED, out)
     return out
+
+
+def redact_obj(obj: Any) -> Any:
+    """Redact every string (keys and values) in a JSON-like structure."""
+    if isinstance(obj, str):
+        return redact(obj)
+    if isinstance(obj, dict):
+        return {redact_obj(k): redact_obj(v) for k, v in obj.items()}
+    if isinstance(obj, list | tuple):
+        return [redact_obj(v) for v in obj]
+    return obj
 
 
 def redact_url(url: str) -> str:
