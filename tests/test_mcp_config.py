@@ -99,7 +99,8 @@ def test_url_without_type_parsed_with_warning():
     "entry",
     [
         {"type": "http", "url": "https://x.example/mcp"},
-        {"serverUrl": "https://x.example/mcp", "transport": "http"},
+        {"url": "https://x.example/mcp", "transport": "http"},
+        {"serverUrl": "https://x.example/mcp"},  # Windsurf's documented form
         {"command": "node"},
     ],
 )

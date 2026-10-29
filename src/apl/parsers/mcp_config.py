@@ -175,8 +175,10 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
         if transport is Transport.SSE:
             warnings.append(f"{name}: legacy HTTP+SSE transport (deprecated in MCP 2026-07-28)")
         server_ev = ev
-        if url and not entry.get("command") and not (entry.get("type") or entry.get("transport")):
-            # ASSUMPTION A6: parsed as Streamable HTTP, but never silently.
+        no_type = not (entry.get("type") or entry.get("transport"))
+        if entry.get("url") and not entry.get("command") and no_type:
+            # ASSUMPTION A6: parsed as Streamable HTTP, but never silently. Windsurf's `serverUrl`
+            # without a type is its documented form, so only `url` is warned on.
             warnings.append(
                 f"{source}{ptr}: url entry has no 'type'; assumed Streamable HTTP. "
                 "Claude Code treats this as a configuration error"
