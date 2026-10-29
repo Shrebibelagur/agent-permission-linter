@@ -149,4 +149,31 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   `reset_password`, `archive_issue`, `take_screenshot`, `process_payment`, `DATA_EXPORT_v2`
   (unknown verbs get read+write; archive maps to delete). Floors: under ≤ 0 and exact ≥ 43.
   **Caveat:** Step B's verbs were chosen from the corpus misses, so 43/48 is a training-set number.
-  It does not measure accuracy on unseen names.
+  It does not measure accuracy on unseen names. (The Step B table uses the old risk-based buckets.
+  It is superseded by E2.)
+
+- **E2 [HEURISTIC] Classifier pass 2 (2026-10-29).** There is now a held-out corpus,
+  `tests/fixtures/tool_corpus_holdout.yaml` (45 names; 10 overlap the main corpus, so 35 are
+  unseen). `download_file` was relabelled ambiguous `[network, read, write]` in both corpora
+  because the two labels disagreed. New buckets (`tests/corpus_report.py`): **exact**;
+  **missing** = any labelled capability not predicted (dangerous); **extra** = superset only
+  (noisy); **unclassified** = `{unknown}` + review flag (C1). Floors: missing ≤ 2 (main) and
+  ≤ 12 (held-out), the baselines measured before pass 2's classifier changes.
+
+  | exact / missing / extra / unclassified | main (48) | held-out (45) | unseen (35) |
+  |----------------------------------------|-----------|---------------|-------------|
+  | before pass 2 (read+write default)     | 42/2/4/–  | 30/12/3/–     | 21/11/3/–   |
+  | + unknown instead of read+write        | 42/2/0/4  | 30/4/0/11     | 21/3/0/11   |
+  | + execute family                       | 41/2/1/4  | 32/4/0/9      | 23/3/0/9    |
+  | + network family                       | 38/2/4/4  | 32/3/1/9      | 24/2/0/9    |
+  | + composite family (final)             | 38/2/5/3  | 32/3/6/4      | 24/2/5/4    |
+
+  Families: **execute** = evaluate, launch, start, stop, restart, reboot, kill (code evaluation
+  and process/service lifecycle). **network** = send, email, upload, post (data crossing the
+  network boundary, i.e. the exfiltration path). **composite** = migrate, cleanup/clean, reset,
+  handle, install/uninstall. These get one uniform widest set (all concrete capabilities), not
+  per-verb sets, so nothing is tailored to labels. Main exact fell 42→38 because write-only labels
+  on send/post/upload now also get network. That is extra (noisy), not missing.
+  **Caveat:** the family verb lists came from the reviewer's instructions, which were written
+  after the first held-out report. The held-out set is therefore no longer fully independent
+  for these verbs.
