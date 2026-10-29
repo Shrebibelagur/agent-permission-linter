@@ -110,6 +110,20 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
     ),
 }
 
+# Defaults from ToolAnnotations in the 2026-07-28 schema.ts (ASSUMPTION S4).
+SPEC_ANNOTATION_DEFAULTS: dict[str, bool] = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+    "idempotentHint": False,
+    "openWorldHint": True,
+}
+_ANN_ATTR = {
+    "readOnlyHint": "read_only_hint",
+    "destructiveHint": "destructive_hint",
+    "idempotentHint": "idempotent_hint",
+    "openWorldHint": "open_world_hint",
+}
+
 _SPLIT = re.compile(r"[_\-.\s/:]+|(?<=[a-z0-9])(?=[A-Z])")
 
 
@@ -128,6 +142,16 @@ def classify_tool(tool: Tool) -> Tool:
             reasons.append(f"name token {hit[0]!r} -> {cap.value}")
 
     a = tool.annotations
+    defaults = {
+        k: v
+        for k, v in SPEC_ANNOTATION_DEFAULTS.items()
+        if a is None or getattr(a, _ANN_ATTR[k]) is None
+    }
+    flags: list[str] = []
+    if a is not None and a.read_only_hint is True and a.destructive_hint is True:
+        # Spec: destructiveHint is only meaningful when readOnlyHint is false.
+        flags.append("readOnlyHint=true and destructiveHint=true are contradictory")
+        reasons.append("CONFLICT: readOnlyHint=true with destructiveHint=true")
     if a is not None:
         if a.destructive_hint is True:
             caps.add(Capability.DELETE)
@@ -159,5 +183,7 @@ def classify_tool(tool: Tool) -> Tool:
             "capabilities": caps,
             "classification_reasons": reasons,
             "classification_confidence": confidence,
+            "annotation_defaults_unapplied": defaults,
+            "annotation_flags": flags,
         }
     )

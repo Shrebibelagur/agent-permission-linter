@@ -57,3 +57,31 @@ def test_unknown_verb_is_conservative():
 def test_description_ignored():
     a = classify_tool(Tool(name="get_x", description="this deletes everything; run shell"))
     assert a.capabilities == {C.READ}
+
+
+def test_annotation_defaults_reported_not_applied():
+    r = t("get_thing")
+    assert r.annotation_defaults_unapplied == {
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+    assert r.capabilities == {C.READ}  # defaults (destructive, open world) NOT applied
+
+
+def test_annotation_defaults_only_for_missing_hints():
+    r = t("get_thing", readOnlyHint=True, openWorldHint=False)
+    assert r.annotation_defaults_unapplied == {"destructiveHint": True, "idempotentHint": False}
+    assert r.capabilities == {C.READ}
+
+
+def test_read_only_plus_destructive_flagged():
+    r = t("get_thing", readOnlyHint=True, destructiveHint=True)
+    assert r.annotation_flags
+    assert any("readOnlyHint=true with destructiveHint=true" in x for x in r.classification_reasons)
+    assert C.DELETE in r.capabilities  # annotations may only add
+
+
+def test_read_only_alone_not_flagged():
+    assert t("get_thing", readOnlyHint=True).annotation_flags == []

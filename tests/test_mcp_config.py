@@ -86,3 +86,22 @@ def test_non_object_entry_skipped_with_warning():
 def test_disabled_flag():
     servers, _ = parse_config_dict({"mcpServers": {"a": {"command": "x", "disabled": True}}}, "x")
     assert servers[0].disabled
+
+
+def test_kind_source_inferred_for_name_based_guesses(fix):
+    servers, _ = parse_config_file(fix / "configs/claude_desktop.json")
+    by = {s.name: s for s in servers}
+    assert by["github"].credentials[0].kind_source == "inferred"
+    graph = by["graph"].credentials
+    argv = next(c for c in graph if c.evidence.note == "secret in argv")
+    assert argv.kind is CredentialKind.UNKNOWN and argv.kind_source == "unknown"
+    app = next(c for c in graph if c.entra_app_id)
+    assert app.kind_source == "inferred"
+
+
+def test_kind_source_unknown_when_name_gives_no_hint():
+    servers, _ = parse_config_dict(
+        {"mcpServers": {"a": {"command": "x", "env": {"MY_PASSWORD": "${PW}"}}}}, "x"
+    )
+    c = servers[0].credentials[0]
+    assert c.kind is CredentialKind.UNKNOWN and c.kind_source == "unknown"

@@ -1,0 +1,55 @@
+# Labelled tool-name corpus for measuring classifier accuracy.
+# `expected` is the hand label for what a tool with this name typically does, NOT what the
+# classifier currently outputs. `ambiguous: true` marks names where the label is a judgment call;
+# for those, the label is the conservative (widest plausible) set.
+# Names are modelled on common public MCP servers (GitHub, filesystem, Slack, browser, DB, cloud).
+
+- {name: search_repositories, expected: [read]}
+- {name: get_file_contents, expected: [read]}
+- {name: list_issues, expected: [read]}
+- {name: getUserProfile, expected: [read]}
+- {name: admin.tools.list, expected: [read]}
+- {name: read_file, expected: [read]}
+- {name: list_directory, expected: [read]}
+- {name: check_status, expected: [read]}
+- {name: describe_instance, expected: [read]}
+- {name: create_issue, expected: [write]}
+- {name: update_pull_request, expected: [write]}
+- {name: merge_pull_request, expected: [write]}
+- {name: push_files, expected: [write]}
+- {name: write_file, expected: [write]}
+- {name: move_file, expected: [write]}
+- {name: send_message, expected: [write]}
+- {name: post_message, expected: [write]}
+- {name: grant_access, expected: [write]}
+- {name: set_permissions, expected: [write]}
+- {name: upload_file, expected: [write]}
+- {name: reset_password, expected: [write]}
+- {name: approve_expense, expected: [write]}
+- {name: delete_branch, expected: [delete]}
+- {name: drop_table, expected: [delete]}
+- {name: revoke_token, expected: [delete]}
+- {name: rm, expected: [delete]}
+- {name: terminate_instance, expected: [delete]}
+- {name: kill_process, expected: [delete]}
+- {name: run_shell_command, expected: [execute]}
+- {name: execute_sql, expected: [execute]}
+- {name: deploy_app, expected: [execute]}
+- {name: invoke_lambda, expected: [execute]}
+- {name: trigger_workflow, expected: [execute]}
+- {name: eval_python, expected: [execute]}
+- {name: sudo, expected: [execute]}
+- {name: browser_navigate, expected: [network]}
+- {name: fetch, expected: [read, network]}
+- {name: fetch_url, expected: [read, network]}
+- {name: download_file, expected: [read, network]}
+# --- ambiguous ---
+- {name: run_query, expected: [read, execute], ambiguous: true, note: "may run arbitrary SQL"}
+- {name: query_database, expected: [read, execute], ambiguous: true, note: "often raw SQL"}
+- {name: manage_files, expected: [read, write, delete], ambiguous: true, note: "CRUD multiplexer"}
+- {name: sync, expected: [read, write], ambiguous: true, note: "direction unknown"}
+- {name: sync_repo, expected: [read, write], ambiguous: true}
+- {name: archive_issue, expected: [write], ambiguous: true, note: "reversible, not delete"}
+- {name: take_screenshot, expected: [read], ambiguous: true}
+- {name: process_payment, expected: [write], ambiguous: true}
+- {name: DATA_EXPORT_v2, expected: [read], ambiguous: true, note: "may also push data out"}

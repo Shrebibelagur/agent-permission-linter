@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -66,6 +67,9 @@ class CredentialRef(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: CredentialKind = CredentialKind.UNKNOWN
+    # ASSUMPTION A8: "inferred" = guessed from an env var/header name; "verified" is reserved for
+    # Phase 3 (Entra). "unknown" = no basis for a kind at all.
+    kind_source: Literal["inferred", "verified", "unknown"] = "unknown"
     env_var: str | None = None
     header: str | None = None
     inline_secret_detected: bool = False  # a literal secret was in the config (value discarded)
@@ -91,6 +95,10 @@ class Tool(BaseModel):
     capabilities: set[Capability] = Field(default_factory=set)
     classification_reasons: list[str] = Field(default_factory=list)
     classification_confidence: float = 0.0
+    # ASSUMPTION S4: spec defaults for hints the server omitted. Reported only, never used to
+    # classify (applying destructiveHint=true by default would mark every tool as delete).
+    annotation_defaults_unapplied: dict[str, bool] = Field(default_factory=dict)
+    annotation_flags: list[str] = Field(default_factory=list)
 
 
 class MCPServer(BaseModel):

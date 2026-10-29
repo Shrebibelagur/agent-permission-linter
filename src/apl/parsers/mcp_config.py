@@ -10,11 +10,11 @@ Supported shapes (see docs/ASSUMPTIONS.md - these are client conventions, NOT MC
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from apl.models import CredentialKind, CredentialRef, Evidence, MCPServer, Transport
+from apl.parsers.jsonc import JSONCError, loads_jsonc
 from apl.redact import (
     SECRETY_KEY,
     env_reference_name,
@@ -96,8 +96,10 @@ def _cred_from_value(name: str, value: Any, *, header: bool, ev: Evidence) -> Cr
         env_var = env_reference_name(sval)
     elif not header:
         env_var = name
+    kind = _guess_kind(name)
     return CredentialRef(
-        kind=_guess_kind(name),
+        kind=kind,
+        kind_source="unknown" if kind is CredentialKind.UNKNOWN else "inferred",
         env_var=env_var,
         header=name if header else None,
         inline_secret_detected=inline,
@@ -146,6 +148,7 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
                 creds.append(
                     CredentialRef(
                         kind=CredentialKind.SERVICE_PRINCIPAL,
+                        kind_source="inferred",
                         env_var=k,
                         entra_app_id=v,
                         evidence=ev.model_copy(
@@ -161,6 +164,7 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
             creds.append(
                 CredentialRef(
                     kind=CredentialKind.API_KEY,
+                    kind_source="inferred",
                     inline_secret_detected=True,
                     evidence=ev.model_copy(
                         update={"pointer": f"{ptr}/url", "note": "secret in URL"}
@@ -193,10 +197,14 @@ def parse_config_file(path: Path) -> tuple[list[MCPServer], list[str]]:
     except OSError as e:
         raise ConfigParseError(f"cannot read {path}: {e.strerror}") from None
     try:
-        data = json.loads(text)
-    except json.JSONDecodeError as e:
+        # ASSUMPTION A10: accept JSONC (comments, trailing commas) as VS Code does.
+        data, used_jsonc = loads_jsonc(text)
+    except JSONCError as e:
         # Do not echo file content - it may contain secrets.
-        raise ConfigParseError(f"{path}: invalid JSON at line {e.lineno} col {e.colno}") from None
+        raise ConfigParseError(f"{path}: {e}") from None
     if not isinstance(data, dict):
         raise ConfigParseError(f"{path}: top level must be an object")
-    return parse_config_dict(data, str(path))
+    servers, warnings = parse_config_dict(data, str(path))
+    if used_jsonc and servers and servers[0].source_format == "mcpServers":
+        warnings.append(f"{path}: uses JSONC comments/trailing commas; client may need strict JSON")
+    return servers, warnings
