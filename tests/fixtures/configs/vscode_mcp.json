@@ -1,0 +1,22 @@
+{
+  "inputs": [
+    { "type": "promptString", "id": "slack-token", "description": "Slack bot token", "password": true }
+  ],
+  "servers": {
+    "slack": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": { "SLACK_BOT_TOKEN": "${input:slack-token}", "SLACK_TEAM_ID": "T000" }
+    },
+    "remote-crm": {
+      "type": "http",
+      "url": "https://user:pw@crm.example.com/mcp?api_key=sk-FAKEfakeFAKEfakeFAKE0000",
+      "headers": { "Authorization": "Bearer ${env:CRM_TOKEN}" }
+    },
+    "legacy": {
+      "type": "sse",
+      "url": "https://legacy.example.com/sse"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+name: release-notes-bot
+purpose: Read merged pull requests in one repo and draft release notes as a GitHub issue.
+owner: alice@contoso.example
+data_classification: internal
+servers:
+  - server: github
+    required_capabilities: [read, write]
+    justification: Read PRs; create one issue with the draft.
+    approval_gate: true
+  - server: filesystem
+    required_capabilities: [read]
+    justification: Read CHANGELOG template.
+  - server: graph
+    required_capabilities: [read]
+    entra_app_id: 00000000-0000-0000-0000-000000000001
+    required_graph_permissions: [User.ReadBasic.All]

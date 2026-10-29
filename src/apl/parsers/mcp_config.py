@@ -1,0 +1,202 @@
+"""MCP client configuration parsers.
+
+These parse STATIC config files only. They never launch a server or open a connection.
+Supported shapes (see docs/ASSUMPTIONS.md - these are client conventions, NOT MCP spec):
+
+  * Claude Desktop / Claude Code / Cursor / Windsurf: {"mcpServers": {name: {...}}}
+  * VS Code (.vscode/mcp.json):                       {"servers": {name: {...}}, "inputs": [...]}
+  * VS Code settings.json:                            {"mcp": {"servers": {...}}}
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from apl.models import CredentialKind, CredentialRef, Evidence, MCPServer, Transport
+from apl.redact import (
+    SECRETY_KEY,
+    env_reference_name,
+    is_env_reference,
+    looks_like_secret,
+    redact,
+    redact_args,
+    redact_url,
+)
+
+
+class ConfigParseError(ValueError):
+    pass
+
+
+# Env-var / header name hints -> credential kind. Heuristic; flagged as such in evidence.
+_KIND_HINTS: list[tuple[str, CredentialKind]] = [
+    ("PERSONAL_ACCESS_TOKEN", CredentialKind.PAT),
+    ("_PAT", CredentialKind.PAT),
+    ("CLIENT_SECRET", CredentialKind.SERVICE_PRINCIPAL),
+    ("CLIENT_CERT", CredentialKind.SERVICE_PRINCIPAL),
+    ("AZURE_CLIENT_ID", CredentialKind.SERVICE_PRINCIPAL),
+    ("MANAGED_IDENTITY", CredentialKind.MANAGED_IDENTITY),
+    ("OAUTH", CredentialKind.OAUTH_APP),
+    ("REFRESH_TOKEN", CredentialKind.USER_DELEGATED),
+    ("API_KEY", CredentialKind.API_KEY),
+    ("APIKEY", CredentialKind.API_KEY),
+    ("BOT_TOKEN", CredentialKind.API_KEY),
+    ("TOKEN", CredentialKind.API_KEY),
+    ("AUTHORIZATION", CredentialKind.API_KEY),
+]
+
+
+_CLIENT_ID_KEYS = {"AZURE_CLIENT_ID", "CLIENT_ID", "ENTRA_CLIENT_ID", "MS_CLIENT_ID"}
+
+
+def _guess_kind(name: str) -> CredentialKind:
+    up = name.upper()
+    for hint, kind in _KIND_HINTS:
+        if hint in up:
+            return kind
+    return CredentialKind.UNKNOWN
+
+
+def _locate_servers(data: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
+    if isinstance(data.get("mcpServers"), dict):
+        return data["mcpServers"], "mcpServers", "/mcpServers"
+    if isinstance(data.get("servers"), dict):
+        return data["servers"], "vscode", "/servers"
+    mcp = data.get("mcp")
+    if isinstance(mcp, dict) and isinstance(mcp.get("servers"), dict):
+        return mcp["servers"], "vscode-settings", "/mcp/servers"
+    raise ConfigParseError("no 'mcpServers', 'servers', or 'mcp.servers' object found")
+
+
+def _transport(entry: dict[str, Any]) -> Transport:
+    t = str(entry.get("type") or entry.get("transport") or "").lower()
+    if t == "stdio":
+        return Transport.STDIO
+    if t in {"http", "streamable-http", "streamablehttp"}:
+        return Transport.HTTP
+    if t == "sse":
+        return Transport.SSE
+    if entry.get("command"):
+        return Transport.STDIO
+    if entry.get("url") or entry.get("serverUrl"):
+        return Transport.HTTP  # ASSUMPTION A6: url without type => Streamable HTTP
+    return Transport.UNKNOWN
+
+
+def _cred_from_value(name: str, value: Any, *, header: bool, ev: Evidence) -> CredentialRef | None:
+    sval = str(value) if value is not None else ""
+    secret_name = bool(SECRETY_KEY.search(name)) or (header and name.lower() == "authorization")
+    inline = bool(sval) and not is_env_reference(sval) and (secret_name or looks_like_secret(sval))
+    if not (secret_name or inline):
+        return None
+    env_var = None
+    if is_env_reference(sval):
+        env_var = env_reference_name(sval)
+    elif not header:
+        env_var = name
+    return CredentialRef(
+        kind=_guess_kind(name),
+        env_var=env_var,
+        header=name if header else None,
+        inline_secret_detected=inline,
+        evidence=ev.model_copy(update={"note": "kind inferred from name (heuristic)"}),
+    )
+
+
+def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer], list[str]]:
+    servers_obj, fmt, base_ptr = _locate_servers(data)
+    servers: list[MCPServer] = []
+    warnings: list[str] = []
+    for name, entry in servers_obj.items():
+        ptr = f"{base_ptr}/{name}"
+        if not isinstance(entry, dict):
+            warnings.append(f"{source}{ptr}: entry is not an object; skipped")
+            continue
+        ev = Evidence(source=source, pointer=ptr)
+        args, inline_in_args = redact_args([str(a) for a in entry.get("args") or []])
+        creds: list[CredentialRef] = []
+        env = entry.get("env") or {}
+        for k, v in env.items():
+            c = _cred_from_value(
+                k, v, header=False, ev=ev.model_copy(update={"pointer": f"{ptr}/env/{k}"})
+            )
+            if c:
+                creds.append(c)
+        for k, v in (entry.get("headers") or {}).items():
+            c = _cred_from_value(
+                k, v, header=True, ev=ev.model_copy(update={"pointer": f"{ptr}/headers/{k}"})
+            )
+            if c:
+                creds.append(c)
+        if inline_in_args:
+            creds.append(
+                CredentialRef(
+                    kind=CredentialKind.UNKNOWN,
+                    inline_secret_detected=True,
+                    evidence=ev.model_copy(
+                        update={"pointer": f"{ptr}/args", "note": "secret in argv"}
+                    ),
+                )
+            )
+        # Client IDs are identifiers, not secrets: keep the value so Phase 3 can link to Entra.
+        for k, v in env.items():
+            if k.upper() in _CLIENT_ID_KEYS and isinstance(v, str) and not is_env_reference(v):
+                creds.append(
+                    CredentialRef(
+                        kind=CredentialKind.SERVICE_PRINCIPAL,
+                        env_var=k,
+                        entra_app_id=v,
+                        evidence=ev.model_copy(
+                            update={
+                                "pointer": f"{ptr}/env/{k}",
+                                "note": "app/client id (heuristic)",
+                            }
+                        ),
+                    )
+                )
+        url = entry.get("url") or entry.get("serverUrl")
+        if url and "?" in str(url) and looks_like_secret(str(url)):
+            creds.append(
+                CredentialRef(
+                    kind=CredentialKind.API_KEY,
+                    inline_secret_detected=True,
+                    evidence=ev.model_copy(
+                        update={"pointer": f"{ptr}/url", "note": "secret in URL"}
+                    ),
+                )
+            )
+        transport = _transport(entry)
+        if transport is Transport.SSE:
+            warnings.append(f"{name}: legacy HTTP+SSE transport (deprecated in MCP 2026-07-28)")
+        servers.append(
+            MCPServer(
+                name=name,
+                transport=transport,
+                command=redact(str(entry["command"])) if entry.get("command") else None,
+                args=args,
+                url=redact_url(str(url)) if url else None,
+                env_keys=sorted(env.keys()),
+                credentials=creds,
+                disabled=bool(entry.get("disabled", False)),
+                source_format=fmt,
+                evidence=ev,
+            )
+        )
+    return servers, warnings
+
+
+def parse_config_file(path: Path) -> tuple[list[MCPServer], list[str]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as e:
+        raise ConfigParseError(f"cannot read {path}: {e.strerror}") from None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        # Do not echo file content - it may contain secrets.
+        raise ConfigParseError(f"{path}: invalid JSON at line {e.lineno} col {e.colno}") from None
+    if not isinstance(data, dict):
+        raise ConfigParseError(f"{path}: top level must be an object")
+    return parse_config_dict(data, str(path))
