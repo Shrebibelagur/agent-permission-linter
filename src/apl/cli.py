@@ -65,7 +65,11 @@ def inventory(
 
 
 def render(report, fmt: Format) -> str:
-    # Step 1: raw model dump; real renderers replace this.
+    from apl.report import render as render_report
+
+    if fmt is Format.md:
+        return render_report(report, fmt.value)
+    # json/sarif renderers land in the next step; raw redacted dump until then.
     return redact(report.model_dump_json(indent=2, exclude_none=True))
 
 
