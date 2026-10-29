@@ -24,9 +24,13 @@ SECRETY_KEY = re.compile(
     r"(?i)(secret|token|password|passwd|pwd|api[_-]?key|apikey|auth|credential|private[_-]?key)"
 )
 _ARG_KV = re.compile(r"(?i)^(--?[\w-]*(?:token|secret|key|password|auth)[\w-]*)=(.+)$")
+# ASSUMPTION A2/A4/A5: `${VAR}`, `$VAR`, `${env:VAR}`, `${input:id}`,
+# `${VAR:-default}` (Claude Code), `${file:/path}` (Windsurf).
 _ENV_REF = re.compile(
     r"^(?:(?i:bearer|token|basic)\s+)?"
-    r"(?:\$\{(?P<kind>env:|input:)?(?P<n1>[A-Za-z0-9_.\-]+)\}|\$(?P<n2>[A-Za-z_][A-Za-z0-9_]*))$"
+    r"(?:\$\{file:(?P<path>[^}\s]+)\}"
+    r"|\$\{(?P<kind>env:|input:)?(?P<n1>[A-Za-z0-9_.\-]+)(?::-(?P<default>[^}]*))?\}"
+    r"|\$(?P<n2>[A-Za-z_][A-Za-z0-9_]*))$"
 )
 
 
@@ -35,20 +39,31 @@ def looks_like_secret(value: str) -> bool:
 
 
 def is_env_reference(value: str) -> bool:
-    """`${VAR}`, `$VAR`, `${env:VAR}`, `${input:id}` (VS Code), optionally `Bearer `-prefixed.
+    """`${VAR}`, `$VAR`, `${env:VAR}`, `${input:id}` (VS Code), `${VAR:-default}`, `${file:/path}`,
+    optionally `Bearer `-prefixed.
 
-    A pointer to a secret, not a secret itself.
+    A pointer to a secret, not a secret itself. A `:-` default that looks like a token is a
+    hardcoded secret, so such a value is NOT a reference.
     """
-    return bool(_ENV_REF.match(value.strip()))
+    m = _ENV_REF.match(value.strip())
+    return bool(m) and not looks_like_secret(m.group("default") or "")
+
+
+def env_reference_default(value: str) -> str | None:
+    """The literal fallback in `${VAR:-default}`, or None. May itself be a secret: never output."""
+    m = _ENV_REF.match(value.strip())
+    return m.group("default") if m else None
 
 
 def env_reference_name(value: str) -> str | None:
-    """Return the referenced variable name; `input:` refs are returned as `input:<id>`."""
+    """Return the referenced name; `input:`/`file:` refs keep their prefix (`file:<path>`)."""
     m = _ENV_REF.match(value.strip())
     if not m:
         return None
     if m.group("n2"):
         return m.group("n2")
+    if m.group("path"):
+        return "file:" + m.group("path")
     return ("input:" if m.group("kind") == "input:" else "") + m.group("n1")
 
 
@@ -72,6 +87,12 @@ def redact_url(url: str) -> str:
     return redact(urlunsplit((parts.scheme, netloc, parts.path, query, "")))
 
 
+def is_clean_reference(value: str) -> bool:
+    """A reference with no literal fallback. Use where the value sits in a secret slot: there a
+    `${VAR:-fallback}` default is a hardcoded secret even if it does not look like a token."""
+    return is_env_reference(value) and not env_reference_default(value)
+
+
 def redact_args(args: list[str]) -> tuple[list[str], bool]:
     """Returns (redacted args, whether an inline secret was found)."""
     found = False
@@ -79,13 +100,13 @@ def redact_args(args: list[str]) -> tuple[list[str], bool]:
     prev_flag_secret = False
     for a in args:
         if prev_flag_secret and not a.startswith("-"):
-            found = found or not is_env_reference(a)
-            out.append(a if is_env_reference(a) else REDACTED)
+            found = found or not is_clean_reference(a)
+            out.append(a if is_clean_reference(a) else REDACTED)
             prev_flag_secret = False
             continue
         m = _ARG_KV.match(a)
         if m:
-            if not is_env_reference(m.group(2)):
+            if not is_clean_reference(m.group(2)):
                 found = True
                 out.append(f"{m.group(1)}={REDACTED}")
             else:

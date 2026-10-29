@@ -17,7 +17,7 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   - Claude Code: remote entries need `type` (`http`, alias `streamable-http`; `sse` deprecated; also
     `ws`). The docs say a `url` without a `type` is a configuration error, so A6's "url => HTTP"
     default does not match Claude Code. No `type` means stdio. Env syntax is `${VAR}` and
-    `${VAR:-default}`. **Gap:** `redact.is_env_reference` does not recognise `${VAR:-default}` yet.
+    `${VAR:-default}`; both are recognised as references (see A4).
     Source: https://code.claude.com/docs/en/mcp
   - Cursor: `.cursor/mcp.json` / `~/.cursor/mcp.json`. stdio examples set `type: "stdio"`; there is
     also `envFile`. Remote entries use `url` + `headers`. Env syntax is `${env:NAME}`.
@@ -39,12 +39,17 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
 - **A4 [CLIENT]** `${env:VAR}` and `${input:id}` are VS Code substitution syntax. `${VAR}` / `$VAR`
   are treated as env references for the other clients. Some clients may not expand these and may
   pass them through literally. If so, the value is a literal (non-secret) string, so treating it as
-  a reference is still safe.
+  a reference is still safe. `${VAR:-default}` and `${file:/path}` are references too, with two
+  exceptions. (1) A default that looks like a known token shape is a hardcoded secret, so the
+  value is not a reference. (2) In a secret slot (an env/header key with a secret-like name, or the
+  value after a `--token`-style flag), any non-empty default is treated as a hardcoded fallback
+  secret. It is flagged inline and redacted from args.
 - **A5 [CLIENT] — verified (with a note).** The Windsurf docs URL now redirects to Devin docs.
   They say a remote server "requires a `serverUrl` or `url` field". Every example uses `serverUrl`.
   We accept both. The config path is now `~/.config/devin/mcp_config.json`
   (`%APPDATA%\devin\mcp_config.json` on Windows). Env syntax is `${env:VAR}`. There is also
-  `${file:/path}`, which reads a secret from a file; we do not recognise it as a reference yet.
+  `${file:/path}`, which reads a secret from a file. It is recognised as a reference and reported
+  as `env_var: "file:<path>"` (see A4).
   Source: https://docs.devin.ai/desktop/cascade/mcp (redirect from
   https://docs.windsurf.com/windsurf/cascade/mcp)
 - **A6 [HEURISTIC]** If an entry has `url` but no `type`, we assume Streamable HTTP, not legacy SSE.

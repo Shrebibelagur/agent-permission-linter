@@ -46,6 +46,43 @@ def test_redact_args_env_ref_kept():
     assert out == ["--token", "${TOKEN}"] and not found
 
 
+GH = "ghp_FAKEfakeFAKEfakeFAKEfakeFAKEfake0000"
+
+
+@pytest.mark.parametrize(
+    "v,name",
+    [
+        ("${API_KEY:-}", "API_KEY"),
+        ("${API_BASE_URL:-https://api.example.com}", "API_BASE_URL"),
+        ("${CLAUDE_PROJECT_DIR:-.}", "CLAUDE_PROJECT_DIR"),
+        ("Bearer ${API_KEY:-}", "API_KEY"),
+        ("${file:/run/secrets/gh}", "file:/run/secrets/gh"),
+        ("${file:~/.secrets/token}", "file:~/.secrets/token"),
+        ("Bearer ${file:~/.secrets/token}", "file:~/.secrets/token"),
+    ],
+)
+def test_default_and_file_refs(v, name):
+    assert is_env_reference(v)
+    assert env_reference_name(v) == name
+
+
+@pytest.mark.parametrize("v", ["${T:-" + GH + "}", "${file:}", "${file:/a b}", "${T:-x} y"])
+def test_not_refs_default_secret_or_malformed(v):
+    assert not is_env_reference(v)
+
+
+def test_redact_args_new_ref_forms_kept_next_to_real_token():
+    args = ["--token", "${file:/run/s}", "--api-key=${K:-}", "--pat", GH, "--cfg", "${D:-.}"]
+    out, found = redact_args(args)
+    assert out == args[:4] + [REDACTED] + args[5:]
+    assert found
+
+
+def test_redact_args_fallback_in_secret_slot_redacted():
+    out, found = redact_args(["--password", "${PW:-hunter2}", "--secret=${S:-hunter2}"])
+    assert "hunter2" not in " ".join(out) and found
+
+
 def test_redact_url():
     assert redact_url("https://u:p@h.example:8443/x?k=v") == f"https://h.example:8443/x?{REDACTED}"
 

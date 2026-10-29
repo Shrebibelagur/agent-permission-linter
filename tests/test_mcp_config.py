@@ -109,6 +109,30 @@ def test_no_type_warning_when_transport_explicit_or_stdio(entry):
     assert not any("no 'type'" in w for w in warns)
 
 
+def test_default_and_file_refs_not_inline_but_real_token_is():
+    env = {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN:-}",
+        "API_KEY": "${file:~/.secrets/api}",
+        "SLACK_BOT_TOKEN": "xoxb-FAKEfakeFAKEfake00",
+        "DB_PASSWORD": "${DB_PASSWORD:-changeme}",
+        "BASE_URL": "${API_BASE_URL:-https://api.example.com}",
+    }
+    headers = {"Authorization": "Bearer ${API_KEY:-}"}
+    servers, _ = parse_config_dict(
+        {"mcpServers": {"a": {"command": "x", "env": env, "headers": headers}}}, "x"
+    )
+    by = {(c.env_var, c.header): c for c in servers[0].credentials}
+    assert by[("GITHUB_TOKEN", None)].inline_secret_detected is False
+    assert by[("file:~/.secrets/api", None)].inline_secret_detected is False
+    assert by[("API_KEY", "Authorization")].inline_secret_detected is False
+    assert by[("SLACK_BOT_TOKEN", None)].inline_secret_detected is True
+    pw = by[("DB_PASSWORD", None)]
+    assert pw.inline_secret_detected is True and "literal fallback" in pw.evidence.note
+    assert not any(c.env_var == "API_BASE_URL" for c in servers[0].credentials)
+    dumped = json.dumps(servers[0].model_dump(mode="json"))
+    assert "xoxb-" not in dumped and "changeme" not in dumped
+
+
 def test_kind_source_inferred_for_name_based_guesses(fix):
     servers, _ = parse_config_file(fix / "configs/claude_desktop.json")
     by = {s.name: s for s in servers}

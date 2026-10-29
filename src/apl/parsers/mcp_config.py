@@ -17,7 +17,9 @@ from apl.models import CredentialKind, CredentialRef, Evidence, MCPServer, Trans
 from apl.parsers.jsonc import JSONCError, loads_jsonc
 from apl.redact import (
     SECRETY_KEY,
+    env_reference_default,
     env_reference_name,
+    is_clean_reference,
     is_env_reference,
     looks_like_secret,
     redact,
@@ -88,9 +90,14 @@ def _transport(entry: dict[str, Any]) -> Transport:
 def _cred_from_value(name: str, value: Any, *, header: bool, ev: Evidence) -> CredentialRef | None:
     sval = str(value) if value is not None else ""
     secret_name = bool(SECRETY_KEY.search(name)) or (header and name.lower() == "authorization")
-    inline = bool(sval) and not is_env_reference(sval) and (secret_name or looks_like_secret(sval))
+    # In a secret slot, `${VAR:-fallback}` carries a hardcoded fallback secret.
+    is_ref = is_clean_reference(sval) if secret_name else is_env_reference(sval)
+    inline = bool(sval) and not is_ref and (secret_name or looks_like_secret(sval))
     if not (secret_name or inline):
         return None
+    note = "kind inferred from name (heuristic)"
+    if inline and env_reference_default(sval):
+        note += "; literal fallback in ${VAR:-...} reference"
     env_var = None
     if is_env_reference(sval):
         env_var = env_reference_name(sval)
@@ -103,7 +110,7 @@ def _cred_from_value(name: str, value: Any, *, header: bool, ev: Evidence) -> Cr
         env_var=env_var,
         header=name if header else None,
         inline_secret_detected=inline,
-        evidence=ev.model_copy(update={"note": "kind inferred from name (heuristic)"}),
+        evidence=ev.model_copy(update={"note": note}),
     )
 
 
