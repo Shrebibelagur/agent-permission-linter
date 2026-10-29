@@ -196,3 +196,38 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   `transform_data`, `refresh_cache`, `rotate_keys`, `configure_pipeline`.
   Takeaway: on unseen names, few tools are silently understated (3/43), but verb coverage is
   thin. About 4 in 10 tools need human review.
+
+## Rules (Phase 2)
+
+Shared conventions: findings have `status: violation | review_required`, a confidence with a
+reason, and `suggested_mappings` that are always labelled "suggested mapping". When an input is
+absent, a rule emits a visible `RuleSkip` ("not evaluated: missing X") instead of passing
+silently. Tools that are unclassified or have confidence ≤ 0.5 never support a hard
+`violation` (C1); they turn findings into `review_required`.
+
+- **R1 [HEURISTIC] — mapping IDs verified.**
+  `LLM06:2025 Excessive Agency` covers excessive functionality, permissions and autonomy. Its
+  prevention section says "require a human to approve high-impact actions" and minimise
+  extension permissions. Source: https://genai.owasp.org/llmrisk/llm062025-excessive-agency/
+  `ASI03 Identity & Privilege Abuse` is from the OWASP Top 10 for Agentic Applications 2026. Only
+  the title and a one-line summary were verified, not the full entry text. Source:
+  https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/
+  Skipped as weak or unverified: ASI02 Tool Misuse for APL-007 (full text not read), and ASI09
+  Human-Agent Trust Exploitation for APL-010 (it is about humans being misled into approving,
+  not about missing gates).
+- **R2 [HEURISTIC] — Graph naming verified.** Permissions follow
+  `{resource}.{operation}.{constraint}`. `ReadWrite` grants "read, create, update, and delete".
+  APL-001 maps operations to the capabilities they add over `Read`: Read/ReadBasic → read;
+  ReadWrite/Manage/FullControl/AccessAsUser → write+delete; Create/Migrate → write. Any other
+  operation is skipped with "missing scope mapping". Constraints (`.All`, `.OwnedBy`) are not yet
+  scored. Source: https://learn.microsoft.com/en-us/graph/permissions-overview
+- **R3 [HEURISTIC] — GitHub scopes verified.** repo/public_repo/user/gist/write:packages → write;
+  delete_repo/delete:packages → delete; admin:org/admin:repo_hook → write+delete; read:org/read:user
+  → read; workflow → write+execute (workflow files run code in CI; the execute part is our
+  inference). Source: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
+- **R4 [HEURISTIC] APL-001.** A scope is over-scoped when none of the capabilities it adds is
+  needed by any classified tool on the same server. Static configs never contain granted scopes,
+  so offline runs skip with "missing granted scopes" until Phase 3. Confidence is 0.9 × a kind
+  factor (verified 1.0, inferred 0.75, unknown 0.6). Any uncertain tool on the server makes the
+  finding `review_required` with confidence ≤ 0.4. Severity is high if the excess includes
+  delete or execute, otherwise medium.

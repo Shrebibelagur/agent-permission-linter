@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "docs": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "docs-mcp"]
+    },
+    "tickets": {
+      "type": "http",
+      "url": "https://tickets.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${input:tickets-token}" }
+    }
+  },
+  "inputs": [
+    { "type": "promptString", "id": "tickets-token", "description": "Tickets token", "password": true }
+  ]
+}

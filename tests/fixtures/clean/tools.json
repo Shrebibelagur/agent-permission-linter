@@ -1,0 +1,14 @@
+{
+  "docs": {
+    "tools": [
+      { "name": "search_docs", "annotations": { "readOnlyHint": true } },
+      { "name": "get_page", "annotations": { "readOnlyHint": true } }
+    ]
+  },
+  "tickets": {
+    "tools": [
+      { "name": "list_tickets", "annotations": { "readOnlyHint": true } },
+      { "name": "create_ticket" }
+    ]
+  }
+}

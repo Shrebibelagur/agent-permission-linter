@@ -1,0 +1,11 @@
+name: docs-helpdesk
+purpose: Answer questions from internal docs and open a ticket when the docs do not cover it.
+owner: helpdesk-team@contoso.example
+data_classification: internal
+servers:
+  - server: docs
+    required_capabilities: [read]
+    justification: Search and read documentation pages.
+  - server: tickets
+    required_capabilities: [read, write]
+    justification: Check for duplicates, then create one ticket.

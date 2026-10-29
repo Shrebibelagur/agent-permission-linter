@@ -77,6 +77,9 @@ class CredentialRef(BaseModel):
     header: str | None = None
     inline_secret_detected: bool = False  # a literal secret was in the config (value discarded)
     entra_app_id: str | None = None  # linked later by collector / agent.yaml
+    # Scopes/permissions actually granted (Graph permissions, OAuth or PAT scopes). Static configs
+    # never contain these; Phase 3 (Entra collector) fills them. None = not known.
+    granted_scopes: list[str] | None = None
     evidence: Evidence | None = None
 
 
@@ -158,14 +161,48 @@ class Inventory(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-class Finding(BaseModel):
-    """Phase 2 will populate. Defined now so the schema is stable."""
+class MappingRef(BaseModel):
+    """A framework reference. Always a SUGGESTED mapping, never a compliance claim."""
 
+    framework: str
+    id: str
+    title: str
+    url: str
+    label: Literal["suggested mapping"] = "suggested mapping"
+
+
+class Finding(BaseModel):
+    """One rule result about one subject. Build via apl.rules.base.make_finding (redacts)."""
+
+    id: str  # stable: "<rule_id>:<hash of subject>"
     rule_id: str
     title: str
     severity: Severity
+    # violation = rule says granted exceeds required; review_required = the data cannot support
+    # a hard verdict (e.g. unclassified tools) and a human must decide.
+    status: Literal["violation", "review_required"] = "violation"
     subject: str
     granted: list[str] = Field(default_factory=list)
     required: list[str] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
-    recommendation: str
+    fix: str
+    confidence: float
+    confidence_reason: str
+    suggested_mappings: list[MappingRef] = Field(default_factory=list)
+
+
+class RuleSkip(BaseModel):
+    """A rule that could not be evaluated for a subject. Shown, never silently dropped."""
+
+    rule_id: str
+    subject: str
+    reason: str  # always starts "not evaluated: missing "
+
+
+class RuleResult(BaseModel):
+    findings: list[Finding] = Field(default_factory=list)
+    skips: list[RuleSkip] = Field(default_factory=list)
+
+    def extend(self, other: RuleResult) -> None:
+        self.findings.extend(other.findings)
+        self.skips.extend(other.skips)
