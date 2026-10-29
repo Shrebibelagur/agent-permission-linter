@@ -1,7 +1,8 @@
-name: docs-helpdesk
-purpose: Answer questions from internal docs and open a ticket when the docs do not cover it.
-owner: helpdesk-team@contoso.example
+name: docs-assistant
+purpose: Personal assistant that answers questions from internal docs and opens a ticket when the docs do not cover it.
+owner: alice@contoso.example
 data_classification: internal
+invokers: single
 servers:
   - server: docs
     required_capabilities: [read]

@@ -149,6 +149,9 @@ class AgentSpec(BaseModel):
     purpose: str
     owner: str | None = None
     data_classification: str | None = None
+    # Who invokes the agent: "single" (its owner only) or "multiple" (shared by many users).
+    # Optional; APL-002 is skipped when absent.
+    invokers: Literal["single", "multiple"] | None = None
     servers: list[ServerPurpose] = Field(default_factory=list)
 
 

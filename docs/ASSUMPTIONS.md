@@ -231,3 +231,11 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   factor (verified 1.0, inferred 0.75, unknown 0.6). Any uncertain tool on the server makes the
   finding `review_required` with confidence ≤ 0.4. Severity is high if the excess includes
   delete or execute, otherwise medium.
+- **R5 [HEURISTIC] APL-002.** Any secret in a static client config is one fixed token for every
+  invoker of that agent instance. This holds whatever the kind; a `${input:...}` prompt still
+  yields one token per client. Who invokes the agent comes from a new optional agent.yaml field,
+  `invokers: single | multiple`. If it is absent, the rule is skipped. Severity: PAT or user
+  refresh token = maker-mode (high); service principal, managed identity, API key or unknown =
+  shared identity (medium). Client-ID-only refs (A9) are identifiers, not tokens, and are
+  excluded. Not flagged: stdio servers with no credential, which run as the local host user. That
+  is also a fixed identity, but there is no credential evidence to cite.
