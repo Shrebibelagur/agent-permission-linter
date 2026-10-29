@@ -55,6 +55,21 @@ def test_execute_family(name):
     assert C.EXECUTE in t(name).capabilities
 
 
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("send_message", {C.WRITE, C.NETWORK}),
+        ("email_user", {C.WRITE, C.NETWORK}),
+        ("upload_file", {C.WRITE, C.NETWORK}),
+        ("post_comment", {C.WRITE, C.NETWORK}),
+        ("http_get", {C.NETWORK, C.READ}),
+        ("trigger_webhook", {C.EXECUTE, C.NETWORK}),
+    ],
+)
+def test_network_family(name, expected):
+    assert t(name).capabilities == expected
+
+
 def test_kill_is_execute_and_delete():
     assert t("kill_process").capabilities == {C.EXECUTE, C.DELETE}
 

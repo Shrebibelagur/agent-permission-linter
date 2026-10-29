@@ -88,6 +88,7 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "transfer",
         "invite",
         "publish",
+        "email",  # sending mail creates a message, like send/post
     ),
     Capability.NETWORK: (
         "fetch",
@@ -102,6 +103,13 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "scrape",
         "crawl",
         "web",
+        # Family: verbs that move data across the network boundary, either outbound (send,
+        # email, upload, post) or inbound. Outbound transfer is the exfiltration path, so these
+        # also count as network, not just write.
+        "send",
+        "email",
+        "upload",
+        "post",
     ),
     Capability.READ: (
         "get",
