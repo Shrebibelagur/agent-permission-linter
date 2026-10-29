@@ -114,6 +114,22 @@ def _cred_from_value(name: str, value: Any, *, header: bool, ev: Evidence) -> Cr
     )
 
 
+def _auto_approve(
+    entry: dict[str, Any], where: str, ptr: str, warnings: list[str]
+) -> tuple[list[str] | None, str | None]:
+    """ASSUMPTION R7: Cline `autoApprove` / Roo Code `alwaysAllow` = tools run without asking."""
+    for key in ("autoApprove", "alwaysAllow"):
+        if key not in entry:
+            continue
+        value = entry[key]
+        if not isinstance(value, list):
+            warnings.append(f"{where}/{key}: not a list; auto-approve not evaluated")
+            return None, None
+        names = [redact(v)[:200] for v in value if isinstance(v, str)]
+        return names, f"{ptr}/{key}"
+    return None, None
+
+
 def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer], list[str]]:
     servers_obj, fmt, base_ptr = _locate_servers(data)
     servers: list[MCPServer] = []
@@ -198,6 +214,7 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
                 "Claude Code treats this as a configuration error"
             )
             server_ev = ev.model_copy(update={"note": "transport assumed http: no 'type' (A6)"})
+        auto_approve, aa_ptr = _auto_approve(entry, f"{source}{ptr}", ptr, warnings)
         servers.append(
             MCPServer(
                 name=name,
@@ -207,6 +224,8 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
                 url=redact_url(str(url)) if url else None,
                 env_keys=sorted(env.keys()),
                 credentials=creds,
+                auto_approve=auto_approve,
+                auto_approve_pointer=aa_ptr,
                 disabled=bool(entry.get("disabled", False)),
                 source_format=fmt,
                 format_status=format_status,

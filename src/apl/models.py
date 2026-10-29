@@ -118,6 +118,10 @@ class MCPServer(BaseModel):
     credentials: list[CredentialRef] = Field(default_factory=list)
     tools: list[Tool] = Field(default_factory=list)
     tools_source: str = "none"  # none | fixture | live
+    # Tool names the client runs WITHOUT asking the user (Cline `autoApprove`, Roo `alwaysAllow`).
+    # None = the config says nothing; [] = nothing auto-approved. ASSUMPTION R7.
+    auto_approve: list[str] | None = None
+    auto_approve_pointer: str | None = None
     disabled: bool = False
     source_format: str = "unknown"
     # ASSUMPTION A3: "unverified" = we found no current official doc for this config shape.

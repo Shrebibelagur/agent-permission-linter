@@ -247,3 +247,18 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   violation. An uncertain tool whose widest set still fits the purpose gets no finding. Violation
   confidence = the tool's classifier confidence (0.7 from the name only, 0.9 with annotations).
   Severity: delete/execute high, write/network medium, read low.
+- **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
+  **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
+  "tool names run without asking" is our inference. Source:
+  https://docs.cline.bot/mcp/configuring-mcp-servers
+  Roo Code: `alwaysAllow` (array) — **unverified**; seen only in third-party setup guides. A
+  non-list value (one source says some client uses a boolean) is ignored with a warning, not
+  guessed. Key absent → `auto_approve: None` → APL-010 skipped. Claude Desktop, VS Code and
+  Claude Code keep approvals elsewhere (app state or settings), so their configs always skip.
+  `[]` → nothing auto-approved, so no finding. Only exact tool names match; wildcards are not
+  interpreted.
+- **R8 [HEURISTIC] APL-010.** High-impact = delete or execute (destructiveHint=true already maps
+  to delete), or unclassified (counted as high-impact until reviewed: medium, confidence 0.5).
+  Confidence otherwise = the tool's classifier confidence. Write and network tools are not
+  flagged yet. A tool that is auto-approved on a server declared `approval_gate: true` in
+  agent.yaml raises severity one level (medium→high, high→critical).
