@@ -45,12 +45,13 @@ def render_markdown(report: ScanReport) -> str:
     out += [
         f"| **total** | **{n_viol}** | **{n_rev}** |",
         "",
-        f"Not evaluated: {counts['not_evaluated']} rule check(s); "
+        f"Checks: {counts['evaluated']} evaluated, {counts['skipped']} not evaluated; "
         "see [Not evaluated](#not-evaluated).",
         "",
-        "## Findings",
-        "",
     ]
+    if counts["message"]:
+        out += [f"**{counts['message']}**", ""]
+    out += ["## Findings", ""]
     if findings:
         out += [
             "| ID | Severity | Status | Confidence | Tool / server | Title |",
@@ -62,10 +63,12 @@ def render_markdown(report: ScanReport) -> str:
                 f"{_code(f.subject)} | {_esc(f.title)} |"
             )
     else:
-        out.append("No findings.")
+        out.append(counts["message"])
     out += ["", "## Fixes", ""]
-    if not findings:
-        out += ["Nothing to fix.", ""]
+    if counts["outcome"] == "nothing_evaluated":
+        out += ["No fixes can be suggested: nothing could be evaluated.", ""]
+    elif counts["outcome"] == "no_findings":
+        out += ["Nothing to fix among the checks that ran.", ""]
     for f in findings:
         out += [f"### {_esc(f.id)}: {_esc(f.subject)}", "", _esc(f.fix), ""]
         out.append(f"- Confidence {f.confidence:.2f}: {_esc(f.confidence_reason)}")

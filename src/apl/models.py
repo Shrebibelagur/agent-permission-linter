@@ -208,10 +208,22 @@ class RuleSkip(BaseModel):
     reason: str  # always starts "not evaluated: missing "
 
 
+class EvaluatedCheck(BaseModel):
+    """A (rule, subject) pair the rule actually evaluated, whether or not it found anything."""
+
+    rule_id: str
+    subject: str
+
+
 class RuleResult(BaseModel):
     findings: list[Finding] = Field(default_factory=list)
     skips: list[RuleSkip] = Field(default_factory=list)
+    evaluated: list[EvaluatedCheck] = Field(default_factory=list)
+
+    def ran(self, rule_id: str, subject: str) -> None:
+        self.evaluated.append(EvaluatedCheck(rule_id=rule_id, subject=subject))
 
     def extend(self, other: RuleResult) -> None:
         self.findings.extend(other.findings)
         self.skips.extend(other.skips)
+        self.evaluated.extend(other.evaluated)

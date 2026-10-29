@@ -71,7 +71,31 @@ def test_leading_heading_or_quote_escaped(fix):
     assert _esc("# x") == "\\# x" and _esc("> y") == "\\> y" and _esc("a -> b") == "a -> b"
 
 
-def test_clean_report_has_no_findings(fix):
+def test_partial_evaluation_wording(fix):
     d = fix / "clean"
     md = render_markdown(run_scan([d / "mcp.json"], d / "agent.yaml", [d / "tools.json"]))
-    assert "No findings." in md and "Nothing to fix." in md
+    sentence = "No findings among the 3 checks that ran (3 not evaluated)."
+    findings = md.split("## Findings", 1)[1].split("## Fixes", 1)[0]
+    assert sentence in findings
+    assert "Checks: 3 evaluated, 3 not evaluated" in md
+    assert "Nothing to fix among the checks that ran." in md
+    assert "No findings." not in md and "Nothing to fix." not in md
+
+
+def test_nothing_evaluated_wording(fix):
+    # config only: no agent.yaml, no tools -> every rule skips
+    md = render_markdown(run_scan([fix / "clean/mcp.json"]))
+    summary = md.split("## Findings", 1)[0]
+    findings = md.split("## Findings", 1)[1].split("## Fixes", 1)[0]
+    assert "Nothing could be evaluated. See Not evaluated." in findings
+    assert "Checks: 0 evaluated" in summary
+    assert "No findings" not in md
+    assert "Nothing to fix" not in md
+    assert "| APL-007 | `agent` | not evaluated: missing agent.yaml |" in md
+
+
+def test_singular_check_wording(fix):
+    rep = run_scan([fix / "clean/mcp.json"])
+    rep.result.ran("APL-002", "bot")
+    md = render_markdown(rep)
+    assert "No findings among the 1 check that ran (" in md

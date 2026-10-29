@@ -73,6 +73,7 @@ def check(inv: Inventory) -> RuleResult:
                 skip(RULE_ID, srv.name, "granted scopes (needs Phase 3 Entra collector)")
             )
             continue
+        res.ran(RULE_ID, srv.name)
         needed = set().union(*(t.capabilities for t in srv.tools)) - {C.UNKNOWN}
         uncertain = [t.name for t in srv.tools if is_uncertain(t)]
         for cred in scoped:

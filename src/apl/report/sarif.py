@@ -13,7 +13,7 @@ from pathlib import Path
 from apl import __version__
 from apl.models import Finding, Severity
 from apl.redact import redact_obj
-from apl.report.common import display_path
+from apl.report.common import display_path, outcome
 from apl.scan import ScanReport
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -91,6 +91,11 @@ def build_sarif(report: ScanReport) -> dict:
         }
         for s in report.result.skips
     ]
+    kind, message = outcome(report)
+    if message:
+        # An empty results array must not read as "clean" when nothing ran.
+        level = "warning" if kind == "nothing_evaluated" else "note"
+        notes.insert(0, {"level": level, "message": {"text": message}})
     return {
         "$schema": SARIF_SCHEMA,
         "version": "2.1.0",
@@ -108,6 +113,11 @@ def build_sarif(report: ScanReport) -> dict:
                     {"executionSuccessful": True, "toolExecutionNotifications": notes}
                 ],
                 "results": [_result(f, report, index) for f in report.sorted_findings()],
+                "properties": {
+                    "evaluated": len(report.result.evaluated),
+                    "skipped": len(report.result.skips),
+                    "outcome": kind,
+                },
             }
         ],
     }

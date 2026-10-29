@@ -55,6 +55,7 @@ def check(inv: Inventory) -> RuleResult:
             for t in srv.tools:
                 if t.name in required_tools and not is_uncertain(t):
                     declared |= t.capabilities
+        res.ran(RULE_ID, srv.name)
         for t in srv.tools:
             if t.name in required_tools:
                 continue

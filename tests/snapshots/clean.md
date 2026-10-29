@@ -16,15 +16,17 @@
 | info | 0 | 0 |
 | **total** | **0** | **0** |
 
-Not evaluated: 3 rule check(s); see [Not evaluated](#not-evaluated).
+Checks: 3 evaluated, 3 not evaluated; see [Not evaluated](#not-evaluated).
+
+**No findings among the 3 checks that ran (3 not evaluated).**
 
 ## Findings
 
-No findings.
+No findings among the 3 checks that ran (3 not evaluated).
 
 ## Fixes
 
-Nothing to fix.
+Nothing to fix among the checks that ran.
 
 ## Not evaluated
 

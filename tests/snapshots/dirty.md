@@ -16,7 +16,7 @@
 | info | 0 | 0 |
 | **total** | **4** | **1** |
 
-Not evaluated: 6 rule check(s); see [Not evaluated](#not-evaluated).
+Checks: 3 evaluated, 6 not evaluated; see [Not evaluated](#not-evaluated).
 
 ## Findings
 

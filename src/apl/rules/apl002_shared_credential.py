@@ -31,6 +31,7 @@ def check(inv: Inventory) -> RuleResult:
     if inv.agent.invokers is None:
         res.skips.append(skip(RULE_ID, inv.agent.name, "agent.yaml invokers"))
         return res
+    res.ran(RULE_ID, inv.agent.name)
     if inv.agent.invokers != "multiple":
         return res
     for srv in inv.servers:

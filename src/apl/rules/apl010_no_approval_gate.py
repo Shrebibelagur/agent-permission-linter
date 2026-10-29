@@ -38,10 +38,12 @@ def check(inv: Inventory) -> RuleResult:
             )
             continue
         if not srv.auto_approve:
+            res.ran(RULE_ID, srv.name)
             continue  # every call asks the user
         if not srv.tools:
             res.skips.append(skip(RULE_ID, srv.name, "tool list"))
             continue
+        res.ran(RULE_ID, srv.name)
         approved = set(srv.auto_approve)
         for t in srv.tools:
             if t.name not in approved:

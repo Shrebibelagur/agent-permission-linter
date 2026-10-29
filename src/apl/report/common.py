@@ -76,14 +76,37 @@ def collect_limits(report: ScanReport) -> Limits:
     return lim
 
 
+NOTHING_EVALUATED = "Nothing could be evaluated. See Not evaluated."
+
+
+def outcome(report: ScanReport) -> tuple[str, str | None]:
+    """("nothing_evaluated" | "no_findings" | "findings", sentence or None).
+
+    Never claim "no findings" when nothing ran: an all-skipped scan is not a clean scan.
+    """
+    n = len(report.result.evaluated)
+    m = len(report.result.skips)
+    if report.result.findings:
+        return "findings", None
+    if n == 0:
+        return "nothing_evaluated", NOTHING_EVALUATED
+    checks = "check that ran" if n == 1 else "checks that ran"
+    return "no_findings", f"No findings among the {n} {checks} ({m} not evaluated)."
+
+
 def summary_counts(report: ScanReport) -> dict:
     sev = {s.value: 0 for s in sorted(Severity, key=lambda s: -SEVERITY_ORDER[s])}
     review = dict(sev)
     for f in report.result.findings:
         (review if f.status == "review_required" else sev)[f.severity.value] += 1
+    kind, message = outcome(report)
     return {
         "findings": len(report.result.findings),
         "violations_by_severity": sev,
         "review_required_by_severity": review,
         "not_evaluated": len(report.result.skips),
+        "evaluated": len(report.result.evaluated),
+        "skipped": len(report.result.skips),
+        "outcome": kind,
+        "message": message,
     }

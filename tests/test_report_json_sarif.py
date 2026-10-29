@@ -66,6 +66,39 @@ def test_sarif_mappings_are_labelled(fix):
     assert maps and all(m["label"] == "suggested mapping" for m in maps)
 
 
+def _clean(fix):
+    d = fix / "clean"
+    return run_scan([d / "mcp.json"], d / "agent.yaml", [d / "tools.json"])
+
+
+def test_json_evaluated_and_skipped_counts(fix):
+    s = json.loads(render_json(dirty(fix)))["summary"]
+    assert (s["evaluated"], s["skipped"], s["outcome"], s["message"]) == (3, 6, "findings", None)
+    s = json.loads(render_json(_clean(fix)))["summary"]
+    assert (s["evaluated"], s["skipped"], s["outcome"]) == (3, 3, "no_findings")
+    assert s["message"] == "No findings among the 3 checks that ran (3 not evaluated)."
+    s = json.loads(render_json(run_scan([fix / "clean/mcp.json"])))["summary"]
+    assert (s["evaluated"], s["outcome"]) == (0, "nothing_evaluated")
+    assert s["message"] == "Nothing could be evaluated. See Not evaluated."
+
+
+def test_sarif_outcome_notes(fix):
+    def run(rep):
+        return json.loads(render_sarif(rep))["runs"][0]
+
+    nothing = run(run_scan([fix / "clean/mcp.json"]))
+    first = nothing["invocations"][0]["toolExecutionNotifications"][0]
+    assert first == {"level": "warning",
+                     "message": {"text": "Nothing could be evaluated. See Not evaluated."}}
+    assert nothing["results"] == [] and nothing["properties"]["evaluated"] == 0
+    partial = run(_clean(fix))
+    first = partial["invocations"][0]["toolExecutionNotifications"][0]
+    assert first["level"] == "note" and first["message"]["text"].startswith("No findings among")
+    assert partial["properties"] == {"evaluated": 3, "skipped": 3, "outcome": "no_findings"}
+    dirty_notes = run(dirty(fix))["invocations"][0]["toolExecutionNotifications"]
+    assert all("not evaluated" in n["message"]["text"] for n in dirty_notes)
+
+
 def test_cli_json_and_sarif_parse(fix):
     for fmt in ("json", "sarif"):
         r = CliRunner().invoke(app, [

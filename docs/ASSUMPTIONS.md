@@ -278,6 +278,14 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   The schema is not re-validated in CI (no `jsonschema` dependency); tests check structure.
 - **R10 [HEURISTIC] JSON report.** `schema_version: "1.0"`, with top-level keys pinned by a
   test. Bump the major version on removed or renamed keys or changed types; adding keys is minor.
+- **R12 [HEURISTIC] "Evaluated" wording.** Each rule records a `(rule, subject)` entry in
+  `RuleResult.evaluated` once it gets past its skips. A server a rule does not apply to (e.g.
+  APL-001 on a server with no credential) is neither evaluated nor skipped. Reports never say
+  "No findings" or "Nothing to fix" when nothing ran: they say "Nothing could be evaluated. See
+  Not evaluated." (SARIF: a `warning` notification). For a partial run they say "No findings among
+  the N checks that ran (M not evaluated)." (SARIF: a `note`). JSON `summary` gains
+  `evaluated`, `skipped`, `outcome` and `message`. Keys were only added, so `schema_version` stays
+  1.0. All three cases validate against the SARIF schema (0 errors).
 - **R11 [HEURISTIC] Exit codes.** 0 = no finding at or above `--fail-on` (default `none`); 1 = at
   least one; 2 = parse error, write error or `--connect`. `review_required` findings count toward
   `--fail-on` at their own severity (APL-007 reviews are low).
