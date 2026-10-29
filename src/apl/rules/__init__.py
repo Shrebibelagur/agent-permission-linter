@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from apl.models import Inventory, RuleResult
-from apl.rules import apl001_overscoped, apl002_shared_credential
+from apl.rules import apl001_overscoped, apl002_shared_credential, apl007_exceeds_purpose
 
-RULES = [apl001_overscoped, apl002_shared_credential]
+RULES = [apl001_overscoped, apl002_shared_credential, apl007_exceeds_purpose]
 
 
 def run_rules(inv: Inventory) -> RuleResult:

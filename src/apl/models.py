@@ -134,6 +134,8 @@ class MCPServer(BaseModel):
 class ServerPurpose(BaseModel):
     server: str
     required_capabilities: set[Capability] = Field(default_factory=set)
+    # Tool names this server is needed for. Optional; listed tools count as declared purpose.
+    required_tools: list[str] | None = None
     justification: str | None = None
     approval_gate: bool = False
     entra_app_id: str | None = None

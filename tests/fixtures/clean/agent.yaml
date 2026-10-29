@@ -6,6 +6,7 @@ invokers: single
 servers:
   - server: docs
     required_capabilities: [read]
+    required_tools: [search_docs, get_page]
     justification: Search and read documentation pages.
   - server: tickets
     required_capabilities: [read, write]

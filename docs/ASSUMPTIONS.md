@@ -239,3 +239,11 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   shared identity (medium). Client-ID-only refs (A9) are identifiers, not tokens, and are
   excluded. Not flagged: stdio servers with no credential, which run as the local host user. That
   is also a fixed identity, but there is no credential evidence to cite.
+- **R6 [HEURISTIC] APL-007.** Declared purpose = agent.yaml `required_capabilities` plus a new
+  optional `required_tools` list. Listed tools are accepted even if powerful (the owner declared
+  them). With only `required_tools`, the declared set is the union of the listed tools'
+  capabilities. An empty `required_capabilities` with no `required_tools` counts as "not declared"
+  and is skipped. Uncertain tools (C1) get a low-severity `review_required` finding, never a
+  violation. An uncertain tool whose widest set still fits the purpose gets no finding. Violation
+  confidence = the tool's classifier confidence (0.7 from the name only, 0.9 with annotations).
+  Severity: delete/execute high, write/network medium, read low.
