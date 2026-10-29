@@ -176,4 +176,23 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   on send/post/upload now also get network. That is extra (noisy), not missing.
   **Caveat:** the family verb lists came from the reviewer's instructions, which were written
   after the first held-out report. The held-out set is therefore no longer fully independent
-  for these verbs.
+  for these verbs. Floors after pass 2: missing ≤ 2 (main) and ≤ 3 (held-out #1).
+
+- **E3 [HEURISTIC] Held-out set #2 (2026-10-29).** `tests/fixtures/tool_corpus_holdout2.yaml`, 43
+  names. Per its author, set #2 was written before seeing any classifier results. It shares no
+  names with the main corpus or held-out #1 (checked by the test). It is the **first fully
+  independent measure** of the classifier. Measured once, after pass 2, with no classifier or
+  label changes. No floor yet.
+
+  | held-out #2 (43) | exact       | missing   | extra    | unclassified | missing + unclassified |
+  |------------------|-------------|-----------|----------|--------------|------------------------|
+  | after pass 2     | 21 (49%)    | 3 (7%)    | 1 (2%)   | 18 (42%)     | 21 (49%)               |
+
+  Missing (dangerous): `publish_event` and `push_notification` (no network; publish and push are
+  only in write), and `sync_calendar` (no network). Extra: `approve_request` (bare `request` →
+  network). Unclassified (18): `append_note`, `register_user`, `tag_resource`, `disable_user`,
+  `discard_draft`, `compile_project`, `shutdown_server`, `ping_host`, `open_connection`,
+  `forward_message`, `apply_migration`, `rebuild_index`, `call_api`, `process_order`,
+  `transform_data`, `refresh_cache`, `rotate_keys`, `configure_pipeline`.
+  Takeaway: on unseen names, few tools are silently understated (3/43), but verb coverage is
+  thin. About 4 in 10 tools need human review.

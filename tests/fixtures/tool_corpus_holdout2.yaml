@@ -1,0 +1,57 @@
+# HELD-OUT #2. Never tune the classifier against this file or edit its labels.
+# ambiguous: true => widest plausible set.
+
+# read
+- {name: list_projects, expected: [read]}
+- {name: get_user_profile, expected: [read]}
+- {name: search_documents, expected: [read]}
+- {name: view_dashboard, expected: [read]}
+- {name: lookup_customer, expected: [read]}
+- {name: count_records, expected: [read]}
+- {name: show_history, expected: [read]}
+- {name: inspect_container, expected: [read]}
+- {name: query_logs, expected: [read]}
+
+# write
+- {name: create_ticket, expected: [write]}
+- {name: update_settings, expected: [write]}
+- {name: edit_document, expected: [write]}
+- {name: assign_task, expected: [write]}
+- {name: append_note, expected: [write]}
+- {name: save_draft, expected: [write]}
+- {name: register_user, expected: [write]}
+- {name: set_reminder, expected: [write]}
+- {name: tag_resource, expected: [write]}
+- {name: approve_request, expected: [write]}
+- {name: disable_user, expected: [write]}
+
+# delete
+- {name: remove_item, expected: [delete]}
+- {name: discard_draft, expected: [delete]}
+- {name: wipe_device, expected: [delete]}
+- {name: erase_history, expected: [delete]}
+
+# execute
+- {name: run_tests, expected: [execute]}
+- {name: compile_project, expected: [execute]}
+- {name: spawn_worker, expected: [execute]}
+- {name: invoke_function, expected: [execute]}
+- {name: shutdown_server, expected: [execute]}
+
+# network
+- {name: ping_host, expected: [network]}
+- {name: open_connection, expected: [network]}
+- {name: publish_event, expected: [network, write]}
+- {name: push_notification, expected: [network, write]}
+- {name: forward_message, expected: [network, write]}
+
+# ambiguous (widest plausible set)
+- {name: apply_migration, expected: [write, execute], ambiguous: true}
+- {name: rebuild_index, expected: [write, execute], ambiguous: true}
+- {name: sync_calendar, expected: [read, write, network], ambiguous: true}
+- {name: call_api, expected: [network, read, write], ambiguous: true}
+- {name: process_order, expected: [read, write], ambiguous: true}
+- {name: transform_data, expected: [read, write], ambiguous: true}
+- {name: refresh_cache, expected: [write, delete], ambiguous: true}
+- {name: rotate_keys, expected: [write, delete], ambiguous: true}
+- {name: configure_pipeline, expected: [write, execute], ambiguous: true}
