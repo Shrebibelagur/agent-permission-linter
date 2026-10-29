@@ -12,8 +12,8 @@ from corpus_report import HOLDOUT, MAIN, load, report
 from apl.models import Capability
 
 # Regression guard: missing-any-capability cases must never increase.
-# Baseline 2026-10-29, measured after the download_file relabel, before classifier pass 2.
-MAX_MISSING = 12
+# 12 before classifier pass 2; tightened to the post-pass-2 result (2026-10-29).
+MAX_MISSING = 3
 
 
 def test_holdout_shape():
