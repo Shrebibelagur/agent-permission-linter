@@ -48,7 +48,10 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   Source: https://docs.devin.ai/desktop/cascade/mcp (redirect from
   https://docs.windsurf.com/windsurf/cascade/mcp)
 - **A6 [HEURISTIC]** If an entry has `url` but no `type`, we assume Streamable HTTP, not legacy SSE.
-  If it has `command` but no `type`, we assume stdio.
+  If it has `command` but no `type`, we assume stdio. A `url` entry with no `type` always produces
+  a warning, and the server's evidence note says the transport was assumed. Claude Code rejects
+  such entries as a configuration error (see A2). Windsurf examples use `serverUrl` with no `type`,
+  so the warning also fires for valid Windsurf configs.
 - **A7 [CLIENT]** `disabled: true` means the client will not start the server. We keep the server
   in the inventory and mark it disabled. Its credentials still exist on disk.
 - **A8 [HEURISTIC]** Credential kind comes from the env var or header *name* (e.g.

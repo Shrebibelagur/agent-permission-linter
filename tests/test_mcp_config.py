@@ -88,6 +88,26 @@ def test_disabled_flag():
     assert servers[0].disabled
 
 
+def test_url_without_type_parsed_with_warning():
+    servers, warns = parse_config_dict({"mcpServers": {"r": {"url": "https://x.example/mcp"}}}, "x")
+    assert servers[0].transport is Transport.HTTP
+    assert "A6" in servers[0].evidence.note
+    assert any("no 'type'" in w and "Claude Code" in w for w in warns)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"type": "http", "url": "https://x.example/mcp"},
+        {"serverUrl": "https://x.example/mcp", "transport": "http"},
+        {"command": "node"},
+    ],
+)
+def test_no_type_warning_when_transport_explicit_or_stdio(entry):
+    _, warns = parse_config_dict({"mcpServers": {"r": entry}}, "x")
+    assert not any("no 'type'" in w for w in warns)
+
+
 def test_kind_source_inferred_for_name_based_guesses(fix):
     servers, _ = parse_config_file(fix / "configs/claude_desktop.json")
     by = {s.name: s for s in servers}

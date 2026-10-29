@@ -174,6 +174,14 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
         transport = _transport(entry)
         if transport is Transport.SSE:
             warnings.append(f"{name}: legacy HTTP+SSE transport (deprecated in MCP 2026-07-28)")
+        server_ev = ev
+        if url and not entry.get("command") and not (entry.get("type") or entry.get("transport")):
+            # ASSUMPTION A6: parsed as Streamable HTTP, but never silently.
+            warnings.append(
+                f"{source}{ptr}: url entry has no 'type'; assumed Streamable HTTP. "
+                "Claude Code treats this as a configuration error"
+            )
+            server_ev = ev.model_copy(update={"note": "transport assumed http: no 'type' (A6)"})
         servers.append(
             MCPServer(
                 name=name,
@@ -185,7 +193,7 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
                 credentials=creds,
                 disabled=bool(entry.get("disabled", False)),
                 source_format=fmt,
-                evidence=ev,
+                evidence=server_ev,
             )
         )
     return servers, warnings
