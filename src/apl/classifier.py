@@ -48,6 +48,15 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "dispatch",
         "sql",
         "sudo",
+        # Family: code evaluation and process/service lifecycle. These start, stop or replace
+        # running code, which is execution whatever the target is.
+        "evaluate",
+        "launch",
+        "start",
+        "stop",
+        "restart",
+        "reboot",
+        "kill",  # also delete: it ends a process
     ),
     Capability.WRITE: (
         "create",

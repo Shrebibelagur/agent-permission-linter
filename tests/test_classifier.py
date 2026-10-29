@@ -29,7 +29,6 @@ def test_name_heuristics(name, expected):
     "name,expected",
     [
         ("terminate_instance", {C.DELETE}),
-        ("kill_process", {C.DELETE}),
         ("sudo", {C.EXECUTE}),
         ("query_database", {C.READ, C.EXECUTE}),
         ("runSqlQuery", {C.READ, C.EXECUTE}),
@@ -46,6 +45,18 @@ def test_name_heuristics(name, expected):
 )
 def test_step_b_verbs_and_compounds(name, expected):
     assert t(name).capabilities == expected
+
+
+@pytest.mark.parametrize(
+    "name", ["evaluate_expression", "launchBrowser", "start_vm", "stop_container",
+             "restart_service", "reboot_host", "eval_js", "invoke_function"]
+)
+def test_execute_family(name):
+    assert C.EXECUTE in t(name).capabilities
+
+
+def test_kill_is_execute_and_delete():
+    assert t("kill_process").capabilities == {C.EXECUTE, C.DELETE}
 
 
 def test_ambiguous_verb_lower_confidence():
