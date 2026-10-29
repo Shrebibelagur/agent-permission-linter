@@ -70,6 +70,21 @@ def test_network_family(name, expected):
     assert t(name).capabilities == expected
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["migrate_schema", "cleanup_temp", "clean_cache", "reset_device", "handle_webhook",
+     "install_plugin", "uninstall_app"],
+)
+def test_composite_family_gets_widest_set(name):
+    r = t(name)
+    assert {C.READ, C.WRITE, C.DELETE, C.EXECUTE, C.NETWORK} <= r.capabilities
+    assert C.UNKNOWN not in r.capabilities
+
+
+def test_composite_alone_lower_confidence():
+    assert t("reset_device").classification_confidence == 0.5
+
+
 def test_kill_is_execute_and_delete():
     assert t("kill_process").capabilities == {C.EXECUTE, C.DELETE}
 

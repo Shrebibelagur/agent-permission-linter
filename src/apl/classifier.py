@@ -147,9 +147,15 @@ _ANN_ATTR = {
 UNCLASSIFIED_FLAG = "unclassified: review required"
 
 # Verbs that say "does many things": give the widest plausible set, at lower confidence.
+_ALL_CONCRETE = frozenset(Capability) - {Capability.UNKNOWN}
 _AMBIGUOUS_VERBS: dict[str, frozenset[Capability]] = {
     "manage": frozenset({Capability.READ, Capability.WRITE, Capability.DELETE}),
     "sync": frozenset({Capability.READ, Capability.WRITE}),
+    # Family: composite verbs that name a multi-step job, not an operation. What they touch
+    # depends on the implementation, so all of them get every concrete capability.
+    **dict.fromkeys(
+        ("migrate", "cleanup", "clean", "reset", "handle", "install", "uninstall"), _ALL_CONCRETE
+    ),
 }
 
 # A query against a database usually means arbitrary SQL, not a fixed read.
