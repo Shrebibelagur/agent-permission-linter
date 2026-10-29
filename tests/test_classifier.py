@@ -76,10 +76,25 @@ def test_read_only_false_adds_write_for_read_named_tool():
     assert C.WRITE in t("get_thing", readOnlyHint=False).capabilities
 
 
-def test_unknown_verb_is_conservative():
+def test_unknown_verb_is_unclassified_not_guessed():
     r = t("frobnicate")
-    assert r.capabilities == {C.READ, C.WRITE}
-    assert r.classification_confidence < 0.5
+    assert r.capabilities == {C.UNKNOWN}
+    assert r.classification_confidence == 0.0
+    assert r.classification_flags == ["unclassified: review required"]
+
+
+def test_unknown_verb_with_read_only_hint_still_unclassified():
+    r = t("frobnicate", readOnlyHint=True)  # untrusted hint cannot classify on its own
+    assert r.capabilities == {C.UNKNOWN}
+
+
+def test_annotation_can_classify_unknown_name_upward():
+    r = t("frobnicate", destructiveHint=True)
+    assert r.capabilities == {C.DELETE} and r.classification_flags == []
+
+
+def test_known_verb_has_no_review_flag():
+    assert t("get_x").classification_flags == []
 
 
 def test_description_ignored():

@@ -123,6 +123,15 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
 
 ## Classifier evaluation
 
+- **C1 [HEURISTIC]** A tool name with no recognised verb is not guessed. It gets
+  `capabilities: {unknown}`, confidence 0, and `classification_flags: ["unclassified: review
+  required"]`. Until pass 2 the default was read+write, which looked like a real classification
+  and hid gaps. Annotations can still add capabilities to such a tool, but a `readOnlyHint` alone
+  never classifies it (S5). `unknown` ranks above execute in `CAPABILITY_RISK`: an unreviewed
+  tool cannot be shown to be less powerful. Corpus reports give it its own `unclassified` bucket,
+  kept out of `missing` because it is flagged, not silent. They also print
+  `missing + unclassified` as the stricter view.
+
 - **E1 [HEURISTIC]** `tests/fixtures/tool_corpus.yaml` holds 48 tool names with hand labels (9 are
   ambiguous and labelled with the widest plausible set). Labels were not changed when the
   classifier changed. Each tool falls in one bucket: **exact**; **under** (predicted max risk below

@@ -5,6 +5,7 @@ Annotations are UNTRUSTED hints (MCP spec says clients must not rely on them for
 decisions from untrusted servers), so they can only ADD capabilities, never remove them:
 a tool named `delete_repo` with readOnlyHint=true stays DELETE and is flagged as conflicting.
 Descriptions are NOT used for classification (prompt-injection surface).
+A name with no recognised verb is NOT guessed: it gets {UNKNOWN}, confidence 0 and a review flag.
 """
 
 from __future__ import annotations
@@ -126,6 +127,8 @@ _ANN_ATTR = {
     "openWorldHint": "open_world_hint",
 }
 
+UNCLASSIFIED_FLAG = "unclassified: review required"
+
 # Verbs that say "does many things": give the widest plausible set, at lower confidence.
 _AMBIGUOUS_VERBS: dict[str, frozenset[Capability]] = {
     "manage": frozenset({Capability.READ, Capability.WRITE, Capability.DELETE}),
@@ -217,11 +220,13 @@ def classify_tool(tool: Tool) -> Tool:
         }:
             reasons.append("CONFLICT: readOnlyHint=true contradicts name; annotation ignored")
 
+    review: list[str] = []
     if not caps:
-        # Unknown verb: assume worst plausible non-exec case rather than "safe".
-        caps = {Capability.READ, Capability.WRITE}
-        reasons.append("no recognised verb -> assume read+write (conservative)")
-        confidence = 0.3
+        # No guess: a made-up default would look like a real classification. Surface it instead.
+        caps = {Capability.UNKNOWN}
+        reasons.append("no recognised verb -> unknown")
+        review.append(UNCLASSIFIED_FLAG)
+        confidence = 0.0
     elif not specific and ambiguous_hit:
         confidence = 0.5
     else:
@@ -232,6 +237,7 @@ def classify_tool(tool: Tool) -> Tool:
             "capabilities": caps,
             "classification_reasons": reasons,
             "classification_confidence": confidence,
+            "classification_flags": review,
             "annotation_defaults_unapplied": defaults,
             "annotation_flags": flags,
         }

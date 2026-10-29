@@ -28,6 +28,7 @@ def test_bucket_definitions():
     assert bucket({D}, {R, W}) == "missing"
     assert bucket({W}, {D}) == "missing"  # riskier prediction still misses write
     assert bucket({W}, {R, W}) == "extra"
+    assert bucket({W}, {Capability.UNKNOWN}) == "unclassified"
 
 
 def test_classifier_accuracy_report():

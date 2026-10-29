@@ -15,15 +15,18 @@ class Capability(StrEnum):
     DELETE = "delete"
     EXECUTE = "execute"
     NETWORK = "network"
+    UNKNOWN = "unknown"  # name gave no recognised verb; needs human review
 
 
-# Ordinal used for "granted exceeds required" comparisons.
+# Ordinal used for "granted exceeds required" comparisons. UNKNOWN ranks highest: until someone
+# reviews it, an unclassified tool cannot be shown to be less powerful than execute.
 CAPABILITY_RISK: dict[Capability, int] = {
     Capability.READ: 1,
     Capability.NETWORK: 2,
     Capability.WRITE: 3,
     Capability.DELETE: 4,
     Capability.EXECUTE: 5,
+    Capability.UNKNOWN: 6,
 }
 
 
@@ -95,6 +98,7 @@ class Tool(BaseModel):
     capabilities: set[Capability] = Field(default_factory=set)
     classification_reasons: list[str] = Field(default_factory=list)
     classification_confidence: float = 0.0
+    classification_flags: list[str] = Field(default_factory=list)  # e.g. review required
     # ASSUMPTION S4: spec defaults for hints the server omitted. Reported only, never used to
     # classify (applying destructiveHint=true by default would mark every tool as delete).
     annotation_defaults_unapplied: dict[str, bool] = Field(default_factory=dict)
