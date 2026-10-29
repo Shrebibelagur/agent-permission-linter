@@ -65,7 +65,7 @@ def render_markdown(report: ScanReport) -> str:
         out.append("No findings.")
     out += ["", "## Fixes", ""]
     if not findings:
-        out.append("Nothing to fix.")
+        out += ["Nothing to fix.", ""]
     for f in findings:
         out += [f"### {_esc(f.id)}: {_esc(f.subject)}", "", _esc(f.fix), ""]
         out.append(f"- Confidence {f.confidence:.2f}: {_esc(f.confidence_reason)}")

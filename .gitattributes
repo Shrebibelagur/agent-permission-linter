@@ -1,0 +1,2 @@
+# Snapshot files are compared byte-for-byte (after newline normalisation); keep LF everywhere.
+tests/snapshots/*.md text eol=lf
