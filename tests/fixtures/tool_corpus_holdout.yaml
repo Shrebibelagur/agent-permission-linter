@@ -1,0 +1,60 @@
+# HELD-OUT corpus. Never tune the classifier against this file and never edit
+# these labels to fit it. Labels = what a tool with this name typically does.
+# ambiguous: true => the label is the widest plausible set.
+
+# read
+- {name: list_branches, expected: [read]}
+- {name: get_file_contents, expected: [read]}
+- {name: describe_table, expected: [read]}
+- {name: list_channels, expected: [read]}
+- {name: get_current_weather, expected: [read]}
+- {name: read_logs, expected: [read]}
+- {name: check_status, expected: [read]}
+- {name: find_users, expected: [read]}
+- {name: summarize_document, expected: [read]}
+- {name: getBalance, expected: [read]}
+
+# write
+- {name: create_issue, expected: [write]}
+- {name: add_comment, expected: [write]}
+- {name: update_record, expected: [write]}
+- {name: set_permissions, expected: [write]}
+- {name: rename_file, expected: [write]}
+- {name: insert_row, expected: [write]}
+- {name: commit_changes, expected: [write]}
+- {name: post_message, expected: [write]}
+- {name: schedule_meeting, expected: [write]}
+- {name: toggle-feature-flag, expected: [write]}
+
+# delete
+- {name: delete_branch, expected: [delete]}
+- {name: remove_user, expected: [delete]}
+- {name: drop_table, expected: [delete]}
+- {name: purge_cache, expected: [delete]}
+- {name: revoke_token, expected: [delete]}
+- {name: truncate_logs, expected: [delete]}
+
+# execute
+- {name: exec_command, expected: [execute]}
+- {name: run_script, expected: [execute]}
+- {name: evaluate_code, expected: [execute]}
+- {name: deploy_service, expected: [execute]}
+- {name: trigger_pipeline, expected: [execute]}
+- {name: restart_server, expected: [execute]}
+
+# network
+- {name: fetch_url, expected: [network, read]}
+- {name: http_post, expected: [network, write]}
+- {name: send_email, expected: [network, write]}
+- {name: download_file, expected: [network, write]}
+- {name: send_webhook, expected: [network, write]}
+- {name: scrape_page, expected: [network, read]}
+
+# ambiguous (widest plausible set)
+- {name: run_report, expected: [read, execute], ambiguous: true}
+- {name: import_data, expected: [write, network], ambiguous: true}
+- {name: migrate_database, expected: [read, write, delete, execute], ambiguous: true}
+- {name: cleanup_resources, expected: [write, delete], ambiguous: true}
+- {name: reset_environment, expected: [write, delete, execute], ambiguous: true}
+- {name: handle_event, expected: [read, write, execute], ambiguous: true}
+- {name: install_package, expected: [execute, write, network], ambiguous: true}
