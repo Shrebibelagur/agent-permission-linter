@@ -42,7 +42,7 @@
 - {name: browser_navigate, expected: [network]}
 - {name: fetch, expected: [read, network]}
 - {name: fetch_url, expected: [read, network]}
-- {name: download_file, expected: [read, network]}
+- {name: download_file, expected: [network, read, write], ambiguous: true, note: "labelling disagreement resolved: fetches remote data (network, read) and saves it locally (write)"}
 # --- ambiguous ---
 - {name: run_query, expected: [read, execute], ambiguous: true, note: "may run arbitrary SQL"}
 - {name: query_database, expected: [read, execute], ambiguous: true, note: "often raw SQL"}

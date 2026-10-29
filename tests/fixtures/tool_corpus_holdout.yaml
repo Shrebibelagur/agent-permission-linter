@@ -46,7 +46,7 @@
 - {name: fetch_url, expected: [network, read]}
 - {name: http_post, expected: [network, write]}
 - {name: send_email, expected: [network, write]}
-- {name: download_file, expected: [network, write]}
+- {name: download_file, expected: [network, read, write], ambiguous: true, note: "labelling disagreement resolved: fetches remote data (network, read) and saves it locally (write)"}
 - {name: send_webhook, expected: [network, write]}
 - {name: scrape_page, expected: [network, read]}
 
