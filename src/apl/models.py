@@ -113,6 +113,8 @@ class MCPServer(BaseModel):
     tools_source: str = "none"  # none | fixture | live
     disabled: bool = False
     source_format: str = "unknown"
+    # ASSUMPTION A3: "unverified" = we found no current official doc for this config shape.
+    format_status: Literal["verified", "unverified"] = "verified"
     evidence: Evidence
 
     def granted_capabilities(self) -> set[Capability]:

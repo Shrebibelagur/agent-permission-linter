@@ -35,7 +35,8 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   Sources: https://code.visualstudio.com/docs/copilot/reference/mcp-configuration ,
   https://code.visualstudio.com/docs/copilot/chat/mcp-servers
   **Unverified:** `settings.json` → `mcp.servers` does not appear in the current official pages.
-  Only third-party sources mention it. We keep parsing it.
+  Only third-party sources mention it. We keep parsing it, but every server from it has
+  `format_status: "unverified"` and the file gets an "unverified format" warning.
 - **A4 [CLIENT]** `${env:VAR}` and `${input:id}` are VS Code substitution syntax. `${VAR}` / `$VAR`
   are treated as env references for the other clients. Some clients may not expand these and may
   pass them through literally. If so, the value is a literal (non-secret) string, so treating it as

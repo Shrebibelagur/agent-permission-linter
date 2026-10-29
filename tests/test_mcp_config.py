@@ -52,9 +52,18 @@ def test_vscode_shape_env_and_input_refs_not_inline(fix):
 
 
 def test_vscode_settings_shape(fix):
-    servers, _ = parse_config_file(fix / "configs/vscode_settings.json")
+    servers, warns = parse_config_file(fix / "configs/vscode_settings.json")
     assert [s.name for s in servers] == ["fetch"]
     assert servers[0].source_format == "vscode-settings"
+    assert servers[0].format_status == "unverified"
+    assert any("unverified format" in w for w in warns)
+
+
+@pytest.mark.parametrize("name", ["claude_desktop.json", "vscode_mcp.json"])
+def test_documented_formats_are_verified(fix, name):
+    servers, warns = parse_config_file(fix / "configs" / name)
+    assert all(s.format_status == "verified" for s in servers)
+    assert not any("unverified format" in w for w in warns)
 
 
 @pytest.mark.parametrize("name", ["claude_desktop.json", "vscode_mcp.json"])

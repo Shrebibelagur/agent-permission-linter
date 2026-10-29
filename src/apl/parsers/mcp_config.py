@@ -118,6 +118,13 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
     servers_obj, fmt, base_ptr = _locate_servers(data)
     servers: list[MCPServer] = []
     warnings: list[str] = []
+    # ASSUMPTION A3: settings.json `mcp.servers` is not in current official VS Code docs.
+    format_status = "unverified" if fmt == "vscode-settings" else "verified"
+    if format_status == "unverified":
+        warnings.append(
+            f"{source}{base_ptr}: unverified format (VS Code settings.json 'mcp.servers' is not "
+            "in current official docs); results may be incomplete"
+        )
     for name, entry in servers_obj.items():
         ptr = f"{base_ptr}/{name}"
         if not isinstance(entry, dict):
@@ -202,6 +209,7 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
                 credentials=creds,
                 disabled=bool(entry.get("disabled", False)),
                 source_format=fmt,
+                format_status=format_status,
                 evidence=server_ev,
             )
         )
