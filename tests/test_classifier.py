@@ -25,6 +25,34 @@ def test_name_heuristics(name, expected):
     assert t(name).capabilities == expected
 
 
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("terminate_instance", {C.DELETE}),
+        ("kill_process", {C.DELETE}),
+        ("sudo", {C.EXECUTE}),
+        ("query_database", {C.READ, C.EXECUTE}),
+        ("runSqlQuery", {C.READ, C.EXECUTE}),
+        ("search_query", {C.READ}),  # no database noun -> stays read
+        ("manage_files", {C.READ, C.WRITE, C.DELETE}),
+        ("sync", {C.READ, C.WRITE}),
+        ("update_pull_request", {C.WRITE}),
+        ("merge_pull_request", {C.WRITE}),
+        ("get_merge_request", {C.READ}),  # "merge" is part of the noun here
+        ("listPullRequests", {C.READ}),
+        ("merge_merge_requests", {C.WRITE}),
+        ("http_request", {C.NETWORK}),  # bare "request" still network
+    ],
+)
+def test_step_b_verbs_and_compounds(name, expected):
+    assert t(name).capabilities == expected
+
+
+def test_ambiguous_verb_lower_confidence():
+    assert t("manage_files").classification_confidence == 0.5
+    assert t("delete_and_manage").classification_confidence == 0.7
+
+
 def test_tokens_camel_and_snake():
     assert tokens("runGraphQuery") == ["run", "graph", "query"]
     assert tokens("get-file_contents") == ["get", "file", "contents"]

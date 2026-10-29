@@ -27,6 +27,8 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "wipe",
         "rm",
         "unlink",
+        "terminate",
+        "kill",
     ),
     Capability.EXECUTE: (
         "exec",
@@ -43,8 +45,8 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "script",
         "trigger",
         "dispatch",
-        "query_sql",
         "sql",
+        "sudo",
     ),
     Capability.WRITE: (
         "create",
@@ -124,6 +126,23 @@ _ANN_ATTR = {
     "openWorldHint": "open_world_hint",
 }
 
+# Verbs that say "does many things": give the widest plausible set, at lower confidence.
+_AMBIGUOUS_VERBS: dict[str, frozenset[Capability]] = {
+    "manage": frozenset({Capability.READ, Capability.WRITE, Capability.DELETE}),
+    "sync": frozenset({Capability.READ, Capability.WRITE}),
+}
+
+# A query against a database usually means arbitrary SQL, not a fixed read.
+_DB_NOUNS = frozenset({"database", "db", "sql", "sqlite", "postgres", "postgresql", "mysql"})
+
+# Two-word nouns whose parts would otherwise match verbs ("request" -> network, "merge" -> write).
+_COMPOUND_NOUNS: dict[tuple[str, str], str] = {
+    ("pull", "request"): "pull_request",
+    ("pull", "requests"): "pull_request",
+    ("merge", "request"): "merge_request",
+    ("merge", "requests"): "merge_request",
+}
+
 _SPLIT = re.compile(r"[_\-.\s/:]+|(?<=[a-z0-9])(?=[A-Z])")
 
 
@@ -131,8 +150,22 @@ def tokens(name: str) -> list[str]:
     return [t.lower() for t in _SPLIT.split(name) if t]
 
 
+def _join_compounds(toks: list[str]) -> list[str]:
+    out: list[str] = []
+    i = 0
+    while i < len(toks):
+        pair = tuple(toks[i : i + 2])
+        if pair in _COMPOUND_NOUNS:
+            out.append(_COMPOUND_NOUNS[pair])
+            i += 2
+        else:
+            out.append(toks[i])
+            i += 1
+    return out
+
+
 def classify_tool(tool: Tool) -> Tool:
-    toks = tokens(tool.name)
+    toks = _join_compounds(tokens(tool.name))
     caps: set[Capability] = set()
     reasons: list[str] = []
     for cap, verbs in _VERBS.items():
@@ -140,6 +173,20 @@ def classify_tool(tool: Tool) -> Tool:
         if hit:
             caps.add(cap)
             reasons.append(f"name token {hit[0]!r} -> {cap.value}")
+    specific = bool(caps)
+    ambiguous_hit = False
+    for t in toks:
+        if t in _AMBIGUOUS_VERBS:
+            ambiguous_hit = True
+            amb = _AMBIGUOUS_VERBS[t]
+            caps |= amb
+            reasons.append(
+                f"ambiguous verb {t!r} -> widest plausible set "
+                f"{sorted(c.value for c in amb)}"
+            )
+    if "query" in toks and _DB_NOUNS.intersection(toks) and Capability.EXECUTE not in caps:
+        caps.add(Capability.EXECUTE)
+        reasons.append("'query' on a database noun -> execute (may run arbitrary SQL)")
 
     a = tool.annotations
     defaults = {
@@ -175,6 +222,8 @@ def classify_tool(tool: Tool) -> Tool:
         caps = {Capability.READ, Capability.WRITE}
         reasons.append("no recognised verb -> assume read+write (conservative)")
         confidence = 0.3
+    elif not specific and ambiguous_hit:
+        confidence = 0.5
     else:
         confidence = 0.9 if a is not None else 0.7
 
