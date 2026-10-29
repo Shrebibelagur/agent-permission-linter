@@ -124,9 +124,20 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
 ## Classifier evaluation
 
 - **E1 [HEURISTIC]** `tests/fixtures/tool_corpus.yaml` holds 48 tool names with hand labels (9 are
-  ambiguous and labelled with the widest plausible set). Baseline on 2026-10-29: 36/48 = 75% exact
-  match. Risk is underestimated for 5 names: `terminate_instance`, `kill_process`, `sudo`,
-  `query_database`, `manage_files`. A known false positive: `pull_request` → network (the token
-  `request`). The `query_sql` entry in the execute verb list can never match, because tokens are
-  split on `_`. The test enforces these numbers as regression floors only. The classifier has not
-  been tuned to the corpus.
+  ambiguous and labelled with the widest plausible set). Labels were not changed when the
+  classifier changed. Each tool falls in one bucket: **exact**; **under** (predicted max risk below
+  the labelled max risk, which is dangerous); **over** (any other mismatch).
+
+  | 2026-10-29         | exact      | under | over |
+  |--------------------|------------|-------|------|
+  | before Step B      | 36/48 (75%) | 5    | 7    |
+  | after Step B       | 43/48 (90%) | 0    | 5    |
+
+  Step B added `terminate`/`kill` → delete and `sudo` → execute. Ambiguous verbs (`manage`, `sync`)
+  get the widest plausible set at confidence 0.5. `query` with a database noun → execute.
+  `pull/merge request(s)` are joined into a single noun, so `request` no longer reads as network.
+  The `query_sql` entry could never match and was removed. Remaining over-classified names:
+  `reset_password`, `archive_issue`, `take_screenshot`, `process_payment`, `DATA_EXPORT_v2`
+  (unknown verbs get read+write; archive maps to delete). Floors: under ≤ 0 and exact ≥ 43.
+  **Caveat:** Step B's verbs were chosen from the corpus misses, so 43/48 is a training-set number.
+  It does not measure accuracy on unseen names.
