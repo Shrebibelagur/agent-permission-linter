@@ -369,11 +369,39 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   `test_one_credential_can_give_a_violation_and_a_review`. The `mail-triage` demo finding and the
   report snapshots did not change.
 
-  **Still open, a narrower form.** A name/schema conflict has confidence 0.6, which meets the
-  threshold, so a strong schema word justifies a scope. `get_status(url)` gives `network` and hides
-  a `Mail.Send` finding. Only strong words do this, and only for the scope they match. Pinned by
-  `test_known_limit_a_conflict_at_the_threshold_counts_as_confident`. Annotations can do the same,
-  since they count at full confidence.
+  **Narrower form: closed (2026-10-30).** A conflict sits at confidence 0.6, which met the threshold,
+  and annotations count at full confidence, so server-written signals could still justify a scope.
+  Now a conflicted tool, and a capability only annotations claim, give possible needs only: they
+  can soften a violation to a review but never remove a finding. Annotation-only capabilities are
+  found by re-classifying without annotations, and that version must be confident too. Otherwise a
+  hint launders the signal: `openWorldHint` makes `get_status(url)` agree instead of conflict, and
+  `readOnlyHint=false` does the same for a weak write.
+
+  | Server | Before | After |
+  |--------|--------|-------|
+  | `get_status(url)`, `Mail.Send` | **no finding** | review_required, medium, 0.4 |
+  | `openWorldHint` tool, `Mail.Send` | **no finding** | review_required, medium, 0.4 |
+  | `get_status(url)` + `openWorldHint`, `Mail.Send` | **no finding** | review_required, medium, 0.4 |
+  | `get_x(content)` + `readOnlyHint=false`, `Mail.ReadWrite` | **no finding** | review_required, high, 0.4 |
+  | `frobnicate` + `destructiveHint`, `delete_repo` | **no finding** | review_required, high, 0.4 |
+  | `send_mail`, `Mail.Send` | no finding | unchanged |
+
+  Tests in `tests/rules/test_apl001.py`: `test_get_status_url_with_mail_send_is_review_not_no_finding`,
+  `test_open_world_annotation_with_mail_send_is_review_not_no_finding`,
+  `test_annotation_cannot_launder_a_conflict`, `test_annotation_cannot_launder_a_weak_write`,
+  `test_strong_agreeing_signals_give_no_finding`. They replace the earlier known-limit test.
+
+  **Cost, measured.** A conflict makes every capability of the tool possible-only, including the
+  name's own. A legitimate `create_issue(url)` with `repo` goes from no finding to a medium review,
+  and `get_status(url)` with `Mail.Read` likewise. Any write tool taking a url can do this. An
+  annotation that is true but unconfirmed by the name also becomes a review. The rate on real tools
+  is unmeasured.
+
+  **Still open.** `browse_status(url)` with `Mail.Send` is no finding. On a `browse` name a url
+  parameter agrees rather than conflicts (C3), and the name is server-chosen, so it justifies network
+  with no conflict flag. Agreement in general is trusted: a server can pick a name and a parameter
+  that match. Name and schema together remain unverified claims; only `send_mail`-style naming
+  separates them from a tool that lies consistently.
 
 ## Rules (Phase 2)
 
@@ -437,8 +465,9 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   → read; workflow → write+execute (workflow files run code in CI; the execute part is our
   inference). Source: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
 - **R4 [HEURISTIC] APL-001.** A scope is over-scoped when none of the capabilities it adds is
-  needed by a tool on the same server. A tool with confidence ≥ 0.6 and no `unknown` gives a
-  confident need; any other tool gives a possible need, and an `unknown` tool could need anything.
+  needed by a tool on the same server. A tool with confidence ≥ 0.6, no `unknown` and no name/schema
+  conflict gives a confident need, except for capabilities only annotations claim. Everything else
+  is a possible need, and an `unknown` tool could need anything.
   Each scope is judged alone: a confident need means no finding; only a possible need means
   `review_required`, naming the tools, with subject `<server>/<credential>/low-confidence`; neither
   means a violation. One credential can give both. Static configs never contain granted scopes,
