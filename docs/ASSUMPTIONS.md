@@ -354,6 +354,14 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   allow" user or group deletion, so Directory has no delete row and User uses
   `User.DeleteRestore.All`. `Application.ReadWrite.OwnedBy` is application-only and cannot manage
   apps it does not own. Source: https://learn.microsoft.com/en-us/graph/permissions-reference
+- **G12 [HEURISTIC] Secrets in this path.** Three independent layers. (1) `secretText`, `hint`, `key`
+  and failure-response bodies are never copied, so they cannot reach output. (2) `redact()` also
+  scrubs the exact client secret and access token, because a client secret need not match any
+  pattern (the `8Q~` shape is observed, not documented). The values stay in process memory only.
+  (3) Rich tracebacks are set not to print locals, and errors never chain the request. Each
+  layer is tested alone. Not covered: a secret shorter than 8 characters is not scrubbed by exact
+  match, and a third-party library logging at DEBUG would be outside `redact()`; httpx at this
+  version logs the URL, which never holds a credential.
 
 ## Reports (`apl scan`)
 

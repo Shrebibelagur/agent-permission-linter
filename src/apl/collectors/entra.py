@@ -19,9 +19,9 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
-from apl.redact import redact
+from apl.redact import redact, remember_secret
 
 GRAPH_HOST = "graph.microsoft.com"
 GRAPH_BASE = f"https://{GRAPH_HOST}/v1.0"
@@ -68,6 +68,7 @@ class EntraCredentials:
         tenant = env["TENANT_ID"]
         if not _TENANT.match(tenant):
             raise EntraError("TENANT_ID must be a tenant GUID or domain name")
+        remember_secret(env["CLIENT_SECRET"])
         return cls(tenant, env["CLIENT_ID"], env["CLIENT_SECRET"])
 
 
@@ -154,6 +155,7 @@ class ClientCredentialsToken:
         lifetime = body.get("expires_in")
         if not isinstance(token, str) or not token or not isinstance(lifetime, int):
             raise EntraError("token response has no usable access_token/expires_in")
+        remember_secret(token)
         return token, float(lifetime)
 
 
@@ -297,13 +299,16 @@ def _key(app_id: Any) -> str:
 def _expiries(obj: dict[str, Any]) -> list[CredentialExpiry]:
     found = [("password", c) for c in obj.get("passwordCredentials") or []]
     found += [("key", c) for c in obj.get("keyCredentials") or []]
-    return [
-        CredentialExpiry(
-            kind=kind, key_id=_text(c.get("keyId")) or None, end_date_time=c.get("endDateTime")
-        )
-        for kind, c in found
-        if isinstance(c, dict)
-    ]
+    out = []
+    for kind, c in found:
+        if not isinstance(c, dict):
+            continue
+        fields = {"kind": kind, "key_id": _text(c.get("keyId")) or None}
+        try:
+            out.append(CredentialExpiry(**fields, end_date_time=c.get("endDateTime")))
+        except ValidationError:  # its message echoes the input, so it is never surfaced
+            out.append(CredentialExpiry(**fields))
+    return out
 
 
 def _qualified(resource: dict[str, Any] | None, resource_id: Any, value: str) -> str:

@@ -21,6 +21,9 @@ _PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-.=]{8,}"),
 ]
 
+_known_secrets: set[str] = set()
+_MIN_KNOWN_SECRET = 8  # a shorter value would scrub ordinary text; Entra secrets are 16+ chars
+
 SECRETY_KEY = re.compile(
     r"(?i)(secret|token|password|passwd|pwd|api[_-]?key|apikey|auth|credential|private[_-]?key)"
 )
@@ -68,8 +71,17 @@ def env_reference_name(value: str) -> str | None:
     return ("input:" if m.group("kind") == "input:" else "") + m.group("n1")
 
 
+def remember_secret(value: str) -> None:
+    """Scrub this exact value everywhere from now on. For secrets we hold that may have no known
+    shape (client secret, access token). Process memory only; never written anywhere."""
+    if len(value) >= _MIN_KNOWN_SECRET:
+        _known_secrets.add(value)
+
+
 def redact(value: str) -> str:
     out = value
+    for known in sorted(_known_secrets, key=len, reverse=True):
+        out = out.replace(known, REDACTED)
     for p in _PATTERNS:
         out = p.sub(REDACTED, out)
     return out

@@ -14,7 +14,12 @@ from apl.inventory import build_inventory
 from apl.parsers.mcp_config import ConfigParseError
 from apl.redact import redact
 
-app = typer.Typer(add_completion=False, help="Agent Permission Linter (read-only).")
+# show_locals stays off: a crash must never print a local holding a credential.
+app = typer.Typer(
+    add_completion=False,
+    help="Agent Permission Linter (read-only).",
+    pretty_exceptions_show_locals=False,
+)
 
 _CONNECT_WARNING = (
     "WARNING: --connect would launch/contact MCP servers (executes third-party code, "

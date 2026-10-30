@@ -89,7 +89,8 @@ pytest && ruff check .
 ```
 
 Phase status: 1 ✅ models/parsers/classifier · 2 🟡 rules APL-001/002/007/010 + `apl scan`
-reports · 3 Entra collector · 4 LLM reasoning layer · 6 docs.
+reports · 3 🟡 Entra collector (fixture-tested, not yet run on a real tenant) · 4 LLM reasoning
+layer · 6 docs.
 
 See [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md) for every format and design assumption, with its
 verification status and source.
