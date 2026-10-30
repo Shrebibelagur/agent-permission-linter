@@ -197,6 +197,21 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   Takeaway: on unseen names, few tools are silently understated (3/43), but verb coverage is
   thin. About 4 in 10 tools need human review.
 
+- **E4 [HEURISTIC] Classifier v2 regression (2026-10-30).** Corpora and labels unchanged; bucket
+  definitions as in E2. Measured once with the classifier frozen. Floors hold: missing ≤ 2 (main)
+  and ≤ 3 (held-out #1).
+
+  | exact / missing / extra / unclassified | main (48) | held-out #1 (45) | unseen in #1 (35) | held-out #2 (43) |
+  |----------------------------------------|-----------|------------------|-------------------|------------------|
+  | before v2                              | 38/2/5/3  | 32/3/6/4         | 24/2/5/4          | 21/3/1/18        |
+  | after v2                               | 37/2/6/3  | 33/2/6/4         | 25/1/5/4          | 26/1/0/16        |
+
+  Seven names moved. Main: `push_files` exact → extra: it is labelled write only, and "push" now
+  also gives network, so exact dropped by one. That is noisier, not more dangerous, and the label was
+  not edited. Held-out #1: `run_report` missing → exact. Held-out #2: `publish_event` and
+  `push_notification` missing → exact; `ping_host` and `forward_message` unclassified → exact;
+  `approve_request` extra → exact. **These numbers are not an accuracy gain:** see E5.
+
 ## Rules (Phase 2)
 
 Shared conventions: findings have `status: violation | review_required`, a confidence with a
