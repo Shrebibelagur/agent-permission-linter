@@ -168,6 +168,7 @@ class Inventory(BaseModel):
     servers: list[MCPServer] = Field(default_factory=list)
     generated_at: datetime
     warnings: list[str] = Field(default_factory=list)
+    entra_source: Literal["live", "mock"] | None = None  # None = no Entra data in this scan
 
 
 class MappingRef(BaseModel):

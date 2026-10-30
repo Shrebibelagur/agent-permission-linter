@@ -1,0 +1,32 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#applications",
+  "value": [
+    {
+      "id": "b3b3b3b3-0000-4000-8000-000000000003",
+      "appId": "a3a3a3a3-0000-4000-8000-000000000003",
+      "displayName": "orphan-files",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "b4b4b4b4-0000-4000-8000-000000000004",
+      "appId": "a4a4a4a4-0000-4000-8000-000000000004",
+      "displayName": "custom-scope",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "b5b5b5b5-0000-4000-8000-000000000005",
+      "appId": "a5a5a5a5-0000-4000-8000-000000000005",
+      "displayName": "unrelated",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": []
+    }
+  ]
+}

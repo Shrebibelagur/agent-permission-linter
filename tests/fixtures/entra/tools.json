@@ -1,0 +1,39 @@
+{
+  "mail": {
+    "tools": [
+      {
+        "name": "list_messages"
+      },
+      {
+        "name": "get_message"
+      }
+    ]
+  },
+  "calendar": {
+    "tools": [
+      {
+        "name": "list_events"
+      },
+      {
+        "name": "get_event"
+      }
+    ]
+  },
+  "files": {
+    "tools": [
+      {
+        "name": "list_files"
+      },
+      {
+        "name": "get_file"
+      }
+    ]
+  },
+  "custom": {
+    "tools": [
+      {
+        "name": "list_messages"
+      }
+    ]
+  }
+}

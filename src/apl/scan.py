@@ -1,11 +1,14 @@
-"""Scan = inventory + rules. No network, no subprocesses."""
+"""Scan = inventory + optional Entra data + rules. The only network use is a live Entra collector
+passed in by the caller. No subprocesses."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import BaseModel
 
+from apl.collectors.entra import EntraSnapshot
 from apl.inventory import build_inventory
 from apl.models import Inventory, RuleResult, Severity
 from apl.rules import run_rules
@@ -31,9 +34,14 @@ class ScanReport(BaseModel):
 
 
 def run_scan(
-    configs: list[Path], agent: Path | None = None, tools: list[Path] | None = None
+    configs: list[Path],
+    agent: Path | None = None,
+    tools: list[Path] | None = None,
+    entra: Callable[[set[str]], EntraSnapshot] | None = None,
 ) -> ScanReport:
     inv = build_inventory(configs, agent, tools)
+    if entra is not None:
+        inv.entra_source = entra(set()).source
     return ScanReport(inventory=inv, result=run_rules(inv))
 
 

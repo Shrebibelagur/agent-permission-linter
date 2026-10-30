@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from functools import partial
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from apl.collectors.entra import ENV_VARS, EntraError, collect_live, collect_mock
 from apl.inventory import build_inventory
 from apl.parsers.mcp_config import ConfigParseError
 from apl.redact import redact
@@ -18,6 +20,11 @@ _CONNECT_WARNING = (
     "WARNING: --connect would launch/contact MCP servers (executes third-party code, "
     "sends credentials). Live connection is not implemented in v0.1. Use --tools with a "
     "saved tools/list result instead."
+)
+
+_ENTRA_NOTICE = (
+    "NOTICE: --entra reads your tenant through Microsoft Graph. Read-only: GET requests only, "
+    "nothing in Entra is changed."
 )
 
 
@@ -85,6 +92,16 @@ def scan(
     connect: Annotated[
         bool, typer.Option("--connect", help="Connect to MCP servers to list tools (NOT in v0.1)")
     ] = False,
+    entra: Annotated[
+        bool,
+        typer.Option(
+            "--entra", help="Read Entra via Graph (GET only). Needs " + ", ".join(ENV_VARS)
+        ),
+    ] = False,
+    entra_mock: Annotated[
+        Path | None,
+        typer.Option("--entra-mock", help="Use saved Graph responses from this directory"),
+    ] = None,
 ) -> None:
     """Inventory + rules, then a report. Exit 0 ok, 1 findings at/above --fail-on, 2 error."""
     from apl.scan import exceeds_threshold, run_scan
@@ -92,9 +109,18 @@ def scan(
     if connect:
         typer.secho(_CONNECT_WARNING, fg="yellow", err=True)
         raise typer.Exit(2)
+    if entra and entra_mock is not None:
+        typer.secho("error: use --entra or --entra-mock, not both", fg="red", err=True)
+        raise typer.Exit(2)
+    collector = None
+    if entra:
+        typer.secho(_ENTRA_NOTICE, fg="yellow", err=True)
+        collector = collect_live
+    elif entra_mock is not None:
+        collector = partial(collect_mock, entra_mock)
     try:
-        report = run_scan(config, agent, tools)
-    except ConfigParseError as e:
+        report = run_scan(config, agent, tools, entra=collector)
+    except (ConfigParseError, EntraError) as e:
         typer.secho(f"error: {redact(str(e))}", fg="red", err=True)
         raise typer.Exit(2) from None
     for w in report.inventory.warnings:

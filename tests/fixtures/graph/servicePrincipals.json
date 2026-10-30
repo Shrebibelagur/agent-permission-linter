@@ -1,0 +1,99 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#servicePrincipals",
+  "value": [
+    {
+      "id": "d0d0d0d0-0000-4000-8000-000000000000",
+      "appId": "00000003-0000-0000-c000-000000000000",
+      "displayName": "Microsoft Graph",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [
+        {
+          "allowedMemberTypes": [
+            "Application"
+          ],
+          "description": "Mail.Read",
+          "displayName": "Mail.Read",
+          "id": "810c84a8-4a9e-49e6-bf7d-12d183f40d01",
+          "isEnabled": true,
+          "origin": "Application",
+          "value": "Mail.Read"
+        },
+        {
+          "allowedMemberTypes": [
+            "Application"
+          ],
+          "description": "Mail.ReadWrite",
+          "displayName": "Mail.ReadWrite",
+          "id": "e2a3a72e-5f79-4c64-b1b1-878b674786c9",
+          "isEnabled": true,
+          "origin": "Application",
+          "value": "Mail.ReadWrite"
+        },
+        {
+          "allowedMemberTypes": [
+            "Application"
+          ],
+          "description": "Files.Read.All",
+          "displayName": "Files.Read.All",
+          "id": "01d4889c-1287-42c6-ac1f-5d1e02578ef6",
+          "isEnabled": true,
+          "origin": "Application",
+          "value": "Files.Read.All"
+        }
+      ],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c1c1c1c1-0000-4000-8000-000000000001",
+      "appId": "a1a1a1a1-0000-4000-8000-000000000001",
+      "displayName": "mail-triage",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c2c2c2c2-0000-4000-8000-000000000002",
+      "appId": "a2a2a2a2-0000-4000-8000-000000000002",
+      "displayName": "calendar-reader",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c3c3c3c3-0000-4000-8000-000000000003",
+      "appId": "a3a3a3a3-0000-4000-8000-000000000003",
+      "displayName": "orphan-files",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c4c4c4c4-0000-4000-8000-000000000004",
+      "appId": "a4a4a4a4-0000-4000-8000-000000000004",
+      "displayName": "custom-scope",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c5c5c5c5-0000-4000-8000-000000000005",
+      "appId": "a5a5a5a5-0000-4000-8000-000000000005",
+      "displayName": "unrelated",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -41,6 +42,7 @@ NO_SPECIFIC_ROLE = "00000000-0000-0000-0000-000000000000"
 
 _TENANT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.\-]*$")  # GUID or domain name; goes into a URL
 _ERROR_CODE = re.compile(r"^[a-z_]{1,64}$")
+_FIXTURE_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
 
 
 class EntraError(RuntimeError):
@@ -85,6 +87,27 @@ class GetOnlyTransport(httpx.BaseTransport):
 
     def close(self) -> None:
         self._inner.close()
+
+
+class FixtureTransport(httpx.BaseTransport):
+    """Mock mode: answers Graph requests from local JSON, so it cannot touch the network.
+
+    `/v1.0/applications/{id}/owners` -> `applications.{id}.owners.json`; a `$skiptoken` value is
+    appended the same way, so a fixture pages through the same `@odata.nextLink` code as live.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        name = request.url.path.removeprefix("/v1.0/").replace("/", ".")
+        token = request.url.params.get("$skiptoken")
+        if token:
+            name += f".{token}"
+        path = self._root / f"{name}.json"
+        if not _FIXTURE_NAME.match(name) or not path.is_file():
+            return httpx.Response(404, json={"error": {"code": "Request_ResourceNotFound"}})
+        return httpx.Response(200, content=path.read_bytes())
 
 
 class ClientCredentialsToken:
@@ -376,3 +399,31 @@ def collect_entra(
         entry.owner_ids = _owners(client, *owner_paths)
         snapshot.apps[app_id] = entry
     return snapshot
+
+
+def collect_mock(root: Path, app_ids: Iterable[str] | None = None) -> EntraSnapshot:
+    """`--entra-mock`: no credentials, no network."""
+    if not root.is_dir():
+        raise EntraError(f"mock Graph directory not found: {root}")
+    client = GraphClient(lambda: "mock", FixtureTransport(root))
+    try:
+        return collect_entra(client, app_ids, source="mock")
+    finally:
+        client.close()
+
+
+def _live_transport() -> httpx.BaseTransport:
+    return httpx.HTTPTransport()
+
+
+def collect_live(
+    app_ids: Iterable[str] | None = None, env: Mapping[str, str] | None = None
+) -> EntraSnapshot:
+    """`--entra`: credentials from the environment only."""
+    creds = EntraCredentials.from_env(env)
+    token = ClientCredentialsToken(creds, _live_transport())
+    client = GraphClient(token, _live_transport())
+    try:
+        return collect_entra(client, app_ids, source="live")
+    finally:
+        client.close()

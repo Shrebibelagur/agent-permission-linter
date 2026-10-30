@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "mail": {
+      "command": "mail-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a1a1a1a1-0000-4000-8000-000000000001"
+      }
+    },
+    "calendar": {
+      "command": "calendar-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a2a2a2a2-0000-4000-8000-000000000002"
+      }
+    },
+    "files": {
+      "command": "files-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a3a3a3a3-0000-4000-8000-000000000003"
+      }
+    },
+    "custom": {
+      "command": "custom-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a4a4a4a4-0000-4000-8000-000000000004"
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#appRoleAssignments",
+  "value": [
+    {
+      "id": "assignment-3",
+      "createdDateTime": "2026-02-02T04:22:45Z",
+      "appRoleId": "01d4889c-1287-42c6-ac1f-5d1e02578ef6",
+      "principalDisplayName": "orphan-files",
+      "principalId": "c3c3c3c3-0000-4000-8000-000000000003",
+      "principalType": "ServicePrincipal",
+      "resourceDisplayName": "Microsoft Graph",
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000"
+    }
+  ]
+}

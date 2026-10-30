@@ -1,0 +1,15 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#appRoleAssignments",
+  "value": [
+    {
+      "id": "assignment-1",
+      "createdDateTime": "2026-02-02T04:22:45Z",
+      "appRoleId": "e2a3a72e-5f79-4c64-b1b1-878b674786c9",
+      "principalDisplayName": "mail-triage",
+      "principalId": "c1c1c1c1-0000-4000-8000-000000000001",
+      "principalType": "ServicePrincipal",
+      "resourceDisplayName": "Microsoft Graph",
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000"
+    }
+  ]
+}

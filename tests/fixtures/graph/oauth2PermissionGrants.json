@@ -1,0 +1,29 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#oauth2PermissionGrants",
+  "value": [
+    {
+      "clientId": "c2c2c2c2-0000-4000-8000-000000000002",
+      "consentType": "AllPrincipals",
+      "id": "grant-calendar-reader",
+      "principalId": null,
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
+      "scope": "Calendars.Read"
+    },
+    {
+      "clientId": "c4c4c4c4-0000-4000-8000-000000000004",
+      "consentType": "AllPrincipals",
+      "id": "grant-custom-scope",
+      "principalId": null,
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
+      "scope": "Mail.Read Contoso.Frobnicate"
+    },
+    {
+      "clientId": "c5c5c5c5-0000-4000-8000-000000000005",
+      "consentType": "AllPrincipals",
+      "id": "grant-unrelated",
+      "principalId": null,
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
+      "scope": "Directory.ReadWrite.All"
+    }
+  ]
+}

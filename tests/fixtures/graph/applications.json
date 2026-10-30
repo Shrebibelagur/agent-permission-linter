@@ -1,0 +1,44 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#applications",
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/applications?$skiptoken=page2",
+  "value": [
+    {
+      "id": "b1b1b1b1-0000-4000-8000-000000000001",
+      "appId": "a1a1a1a1-0000-4000-8000-000000000001",
+      "displayName": "mail-triage",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": [
+        {
+          "customKeyIdentifier": null,
+          "displayName": "ci",
+          "endDateTime": "2025-01-01T00:00:00Z",
+          "hint": "Fak",
+          "keyId": "f1f1f1f1-0000-4000-8000-000000000001",
+          "secretText": null,
+          "startDateTime": "2024-01-01T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b2b2b2b2-0000-4000-8000-000000000002",
+      "appId": "a2a2a2a2-0000-4000-8000-000000000002",
+      "displayName": "calendar-reader",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": [
+        {
+          "customKeyIdentifier": null,
+          "displayName": "ci",
+          "endDateTime": "2031-01-01T00:00:00Z",
+          "hint": "Fak",
+          "keyId": "f1f1f1f1-0000-4000-8000-000000000002",
+          "secretText": null,
+          "startDateTime": "2024-01-01T00:00:00Z"
+        }
+      ]
+    }
+  ]
+}
