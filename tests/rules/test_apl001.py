@@ -221,13 +221,6 @@ def test_review_names_a_bounded_number_of_tools():
     assert "and 3 more" in f.confidence_reason
 
 
-def test_known_limit_a_conflict_at_the_threshold_counts_as_confident():
-    """Pinned, not endorsed (E7): 0.6 meets CONFIDENT_NEED, so a schema-added capability on a
-    conflicted tool justifies a scope. `get_status(url)` hides this Mail.Send finding."""
-    assert mail_findings(named("get_status"), scopes=("Mail.Send",))
-    assert mail_findings(named("get_status", "url"), scopes=("Mail.Send",)) == []
-
-
 def test_scope_table():
     assert scope_capabilities("Files.ReadWrite.All") == {"write", "delete"}
     assert scope_capabilities("User.Read") == {"read"}

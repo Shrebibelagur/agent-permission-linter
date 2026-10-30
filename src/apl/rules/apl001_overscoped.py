@@ -4,11 +4,13 @@ For each granted scope we take its *distinguishing* capabilities: what it adds o
 least-privileged variant. Example: `Files.ReadWrite.All` adds write+delete over `Files.Read.All`.
 If no tool on the server needs any of them, the scope is over-scoped.
 
-Tools count differently. A tool classified with confidence >= 0.6 gives a confident need. Anything
-else gives only a possible need: a `search_mail(text)` that may write, or an unclassified tool,
-which could need anything. A scope with a confident need gets no finding. One with only a possible
-need is review_required, naming the tools. One with neither is a violation. A low-confidence tool
-must never make a scope look justified: that let one `text` parameter hide a finding (E7).
+Tools count differently. A tool classified with confidence >= 0.6 gives a confident need, unless
+its name and schema conflict. Anything else gives only a possible need: a `search_mail(text)` that
+may write, a conflicted `get_status(url)`, an unclassified tool (which could need anything), or a
+capability only annotations claim. Schemas and annotations are server-written, so on their own they
+may soften a violation but never remove a finding. A scope with a confident need gets no finding.
+One with only a possible need is review_required, naming the tools. One with neither is a violation
+(E7).
 
 Inputs: `CredentialRef.granted_scopes`, which static configs do not contain (the Entra collector
 fills it), and the server's classified tools. Missing either produces a visible skip.
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 import re
 
+from apl.classifier import CONFLICT_FLAG, classify_tool
 from apl.models import Capability, Finding, Inventory, RuleResult, Severity, Tool
 from apl.rules.base import ASI03, LLM06, kind_confidence, make_finding, skip
 from apl.scopemap import (
@@ -87,7 +90,25 @@ def _narrower(scopes: list[str], needed: set[Capability]) -> str:
 
 
 def _is_confident(tool: Tool) -> bool:
-    return C.UNKNOWN not in tool.capabilities and tool.classification_confidence >= CONFIDENT_NEED
+    return (
+        C.UNKNOWN not in tool.capabilities
+        and tool.classification_confidence >= CONFIDENT_NEED
+        and CONFLICT_FLAG not in tool.classification_flags
+    )
+
+
+def _confident_needs(tool: Tool) -> set[Capability]:
+    """What this tool may justify. The classifier does not record where a capability came from,
+    so re-classify without annotations: what disappears came only from them. That version must
+    be confident too, because an annotation can hide a problem: with openWorldHint, `url` agrees
+    with the name instead of conflicting, and readOnlyHint=false turns a weak write into agreement.
+    """
+    if not _is_confident(tool):
+        return set()
+    if tool.annotations is None:
+        return set(tool.capabilities)
+    plain = classify_tool(tool.model_copy(update={"annotations": None}))
+    return tool.capabilities & plain.capabilities if _is_confident(plain) else set()
 
 
 def _may_need(tool: Tool, caps: frozenset[Capability]) -> bool:
@@ -130,7 +151,7 @@ def _finding(
         title = "Granted scope may be broader than any tool needs"
         conf = min(conf, REVIEW_CONFIDENCE)
         named = _names(low_tools)
-        why += f"; only unclassified/low-confidence tool(s) may need it: {named}"
+        why += f"; only unclassified, low-confidence or unconfirmed tool(s) may need it: {named}"
         fix = (
             f"Check whether {named} really needs {wanted}. If not, remove or narrow "
             f"{', '.join(scopes)}. {narrow}"
@@ -170,8 +191,7 @@ def check(inv: Inventory) -> RuleResult:
             res.skips.append(skip(RULE_ID, srv.name, why))
             continue
         res.ran(RULE_ID, srv.name)
-        low = [t for t in srv.tools if not _is_confident(t)]
-        confident = set().union(*(t.capabilities for t in srv.tools if _is_confident(t)))
+        confident = set().union(*(_confident_needs(t) for t in srv.tools))
         for cred in scoped:
             label = cred.env_var or cred.header or "credential"
             over: list[tuple[str, frozenset[Capability]]] = []
@@ -184,7 +204,7 @@ def check(inv: Inventory) -> RuleResult:
                         skip(RULE_ID, f"{srv.name}/{label}/{scope}", "scope mapping")
                     )
                 elif not caps & confident:
-                    who = [t.name for t in low if _may_need(t, caps)]
+                    who = [t.name for t in srv.tools if _may_need(t, caps)]
                     (possible if who else over).append((scope, caps))
                     low_tools.update(dict.fromkeys(who))
             if over:
