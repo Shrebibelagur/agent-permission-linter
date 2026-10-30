@@ -64,7 +64,7 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   `*_PERSONAL_ACCESS_TOKEN` is a PAT and `*CLIENT_SECRET` is a service principal). Names can mislead.
   Phase 3 (Entra) confirms the real identity where an app ID is known. Every `CredentialRef` has a
   `kind_source` field: `inferred` (guessed from a name), `unknown` (no basis), or `verified`
-  (reserved for Phase 3; not set anywhere yet).
+  (confirmed from Entra; see G10).
 - **A9 [HEURISTIC]** `AZURE_CLIENT_ID` / `CLIENT_ID` values are identifiers, not secrets. We keep
   them so we can link to Entra. Tenant IDs are kept too.
 - **A10 [HEURISTIC] — fixed.** Config files are parsed as JSONC (`//` and `/* */` comments, trailing
@@ -220,14 +220,17 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   APL-001 maps operations to the capabilities they add over `Read`: Read/ReadBasic → read;
   ReadWrite/Manage/FullControl/AccessAsUser → write+delete; Create/Migrate → write. Any other
   operation is skipped with "missing scope mapping". Constraints (`.All`, `.OwnedBy`) are not yet
-  scored. Source: https://learn.microsoft.com/en-us/graph/permissions-overview
+  scored. Added in Phase 3: Send → network, DeleteRestore → delete. **Known overstatement:**
+  `User.ReadWrite.All` and `Directory.ReadWrite.All` count as delete under this rule, but the
+  reference says Directory.ReadWrite.All cannot delete users or groups (G11), so such a finding
+  can be rated high where medium is right. Source: https://learn.microsoft.com/en-us/graph/permissions-overview
 - **R3 [HEURISTIC] — GitHub scopes verified.** repo/public_repo/user/gist/write:packages → write;
   delete_repo/delete:packages → delete; admin:org/admin:repo_hook → write+delete; read:org/read:user
   → read; workflow → write+execute (workflow files run code in CI; the execute part is our
   inference). Source: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
 - **R4 [HEURISTIC] APL-001.** A scope is over-scoped when none of the capabilities it adds is
   needed by any classified tool on the same server. Static configs never contain granted scopes,
-  so offline runs skip with "missing granted scopes" until Phase 3. Confidence is 0.9 × a kind
+  so runs without `--entra`/`--entra-mock` skip with "missing granted scopes". Confidence is 0.9 × a kind
   factor (verified 1.0, inferred 0.75, unknown 0.6). Any uncertain tool on the server makes the
   finding `review_required` with confidence ≤ 0.4. Severity is high if the excess includes
   delete or execute, otherwise medium.
@@ -331,6 +334,26 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   appId `00000003-0000-0000-c000-000000000000`, never by name; other APIs' scopes become
   `<resource>/<scope>` so `Mail.Read` on a custom API cannot pass as the Graph permission.
   Per-object calls run only for apps a scan links to, to limit throttling.
+- **G10 [HEURISTIC] Linking.** A credential links on `appId`, case-insensitively, from the config's
+  client id (A9) or agent.yaml `entra_app_id`. The latter always adds a separate id-only
+  `CredentialRef`: APL-002 treats a ref with an app id as "not a token", so stamping it on a
+  secret-bearing ref would hide that secret from APL-002. `granted_scopes` is the union of
+  application permissions and all delegated grants. That is conservative: which of them a given
+  token actually carries depends on its flow, which a static config does not show. An app with
+  no grants gets `[]` and is evaluated; an app not found stays `None` and is skipped with a
+  warning. `kind_source: verified` is set only for `servicePrincipalType` `Application` or
+  `ManagedIdentity`. Sign-in scopes (`openid`, `profile`, `email`, `offline_access`) have no mapping,
+  so they appear as skips. No owner, expired credentials and per-user grants are warnings, not
+  findings: no rule covers them yet.
+- **G11 [HEURISTIC] `scopemap.py` — permission names verified, choice of minimum is ours (suggested
+  mapping).** Every name in the table was checked against the permissions reference, with
+  delegated and application availability; `Files.Read` and `User.Read` have no application form, so
+  those rows differ. Narrower options exist but cover only part of a resource and are not offered:
+  `Mail.ReadBasic`, `Calendars.ReadBasic`, `User.ReadBasic.All`. `Mail.ReadWrite` "does not include
+  permission to send mail", hence the separate `Mail.Send` row. `Directory.ReadWrite.All` "does not
+  allow" user or group deletion, so Directory has no delete row and User uses
+  `User.DeleteRestore.All`. `Application.ReadWrite.OwnedBy` is application-only and cannot manage
+  apps it does not own. Source: https://learn.microsoft.com/en-us/graph/permissions-reference
 
 ## Reports (`apl scan`)
 

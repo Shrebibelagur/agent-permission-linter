@@ -70,15 +70,15 @@ class CredentialRef(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     kind: CredentialKind = CredentialKind.UNKNOWN
-    # ASSUMPTION A8: "inferred" = guessed from an env var/header name; "verified" is reserved for
-    # Phase 3 (Entra). "unknown" = no basis for a kind at all.
+    # ASSUMPTION A8: "inferred" = guessed from an env var/header name; "verified" = confirmed from
+    # Entra (G10). "unknown" = no basis for a kind at all.
     kind_source: Literal["inferred", "verified", "unknown"] = "unknown"
     env_var: str | None = None
     header: str | None = None
     inline_secret_detected: bool = False  # a literal secret was in the config (value discarded)
     entra_app_id: str | None = None  # linked later by collector / agent.yaml
     # Scopes/permissions actually granted (Graph permissions, OAuth or PAT scopes). Static configs
-    # never contain these; Phase 3 (Entra collector) fills them. None = not known.
+    # never contain these; the Entra collector fills them. None = not known.
     granted_scopes: list[str] | None = None
     evidence: Evidence | None = None
 

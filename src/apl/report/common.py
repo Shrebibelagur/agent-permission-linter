@@ -14,8 +14,12 @@ STANDING_LIMITS = [
     "Client config formats are client conventions, not MCP spec (A1).",
     "Tool descriptions are never used to classify; annotations can only add capabilities (S5, S6).",
     "Framework references are suggested mappings, not compliance claims.",
-    "Granted scopes (APL-001) need the Phase 3 Entra collector; offline runs skip it.",
+    "Granted scopes (APL-001) need Entra data (--entra or --entra-mock); otherwise skipped.",
 ]
+ENTRA_LIMITS = {
+    "mock": "Entra data came from saved fixtures (--entra-mock), not a real tenant.",
+    "live": "Entra data was read from Microsoft Graph during this scan (GET only).",
+}
 
 
 class UnverifiedFormat(BaseModel):
@@ -44,6 +48,8 @@ def display_path(s: str) -> str:
 
 def collect_limits(report: ScanReport) -> Limits:
     lim = Limits(parser_warnings=[display_path(w) for w in report.inventory.warnings])
+    if report.inventory.entra_source:
+        lim.standing.append(ENTRA_LIMITS[report.inventory.entra_source])
     for srv in report.inventory.servers:
         src = display_path(srv.evidence.source)
         if srv.format_status == "unverified":

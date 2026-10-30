@@ -32,7 +32,7 @@ Nothing to fix among the checks that ran.
 
 | Rule | Subject | Reason |
 |---|---|---|
-| APL-001 | `tickets` | not evaluated: missing granted scopes (needs Phase 3 Entra collector) |
+| APL-001 | `tickets` | not evaluated: missing granted scopes (run with --entra or --entra-mock) |
 | APL-010 | `docs` | not evaluated: missing auto-approve list (no autoApprove/alwaysAllow in config) |
 | APL-010 | `tickets` | not evaluated: missing auto-approve list (no autoApprove/alwaysAllow in config) |
 
@@ -52,4 +52,4 @@ Nothing to fix among the checks that ran.
 - Client config formats are client conventions, not MCP spec (A1).
 - Tool descriptions are never used to classify; annotations can only add capabilities (S5, S6).
 - Framework references are suggested mappings, not compliance claims.
-- Granted scopes (APL-001) need the Phase 3 Entra collector; offline runs skip it.
+- Granted scopes (APL-001) need Entra data (--entra or --entra-mock); otherwise skipped.

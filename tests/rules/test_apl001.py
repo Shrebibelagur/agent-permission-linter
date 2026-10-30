@@ -59,7 +59,7 @@ def test_skip_missing_granted_scopes():
     res = check(inventory(server(tools=READ_TOOLS, creds=[cred()])))
     assert res.findings == []
     assert [s.reason for s in res.skips] == [
-        "not evaluated: missing granted scopes (needs Phase 3 Entra collector)"
+        "not evaluated: missing granted scopes (run with --entra or --entra-mock)"
     ]
 
 

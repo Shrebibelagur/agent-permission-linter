@@ -3,7 +3,8 @@
 Finds AI agents that hold more power than their declared task needs: a finding is *granted*
 capability exceeding *required* capability.
 
-**Safety:** read-only. Never connects to MCP servers (`--connect` is refused in v0.1). Secrets are
+**Safety:** read-only. Never connects to MCP servers (`--connect` is refused in v0.1). Entra access
+is optional and GET-only, with the token held in memory. Secrets are
 redacted at parse time and again on every report; only env var *names* are stored. There is no
 `apply` command.
 
@@ -41,7 +42,7 @@ That fixture is deliberately over-powered. Excerpt of `report.md` (full report:
 
 | Rule | Subject | Reason |
 |---|---|---|
-| APL-001 | `github` | not evaluated: missing granted scopes (needs Phase 3 Entra collector) |
+| APL-001 | `github` | not evaluated: missing granted scopes (run with --entra or --entra-mock) |
 | APL-002 | `release-notes-bot` | not evaluated: missing agent.yaml invokers |
 | APL-010 | `github` | not evaluated: missing auto-approve list (no autoApprove/alwaysAllow in config) |
 ```
@@ -59,9 +60,24 @@ The well-scoped fixture in `tests/fixtures/clean/` produces no findings
 | `-f/--format` | `md` (default), `json` (`schema_version` 1.0), `sarif` (2.1.0) |
 | `-o/--out` | write the report to a file instead of stdout |
 | `--fail-on` | `none` (default), `low`, `medium`, `high` |
+| `--entra-mock DIR` | read saved Graph responses from `DIR` (no network, no credentials) |
+| `--entra` | read Entra live through Graph, GET only. Needs `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET` |
 
-Exit codes: `0` no finding at or above `--fail-on` · `1` at least one (use in CI) · `2` parse or
-write error, or `--connect`.
+Exit codes: `0` no finding at or above `--fail-on` · `1` at least one (use in CI) · `2` parse,
+write or Entra error, or `--connect`.
+
+### Entra
+
+Linking a credential to its Entra app fills in what it was really granted, so APL-001 can evaluate.
+Try it with no tenant:
+
+```bash
+apl scan -c tests/fixtures/entra/mcp.json -t tests/fixtures/entra/tools.json \
+  --entra-mock tests/fixtures/graph
+```
+
+`--entra` needs an app registration with the application permissions `Application.Read.All` and
+`Directory.Read.All`. It has been tested only against Graph-shaped fixtures, not a real tenant.
 
 Rules: APL-001 over-scoped permission, APL-002 maker-mode/shared credential, APL-007 tool
 capability exceeds declared purpose, APL-010 no human approval gate. A rule that lacks its input

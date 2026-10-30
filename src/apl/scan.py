@@ -9,6 +9,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from apl.collectors.entra import EntraSnapshot
+from apl.collectors.link import link_entra, linkable_app_ids
 from apl.inventory import build_inventory
 from apl.models import Inventory, RuleResult, Severity
 from apl.rules import run_rules
@@ -41,7 +42,7 @@ def run_scan(
 ) -> ScanReport:
     inv = build_inventory(configs, agent, tools)
     if entra is not None:
-        inv.entra_source = entra(set()).source
+        link_entra(inv, entra(linkable_app_ids(inv)))
     return ScanReport(inventory=inv, result=run_rules(inv))
 
 
