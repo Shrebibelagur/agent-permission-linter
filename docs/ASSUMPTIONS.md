@@ -155,8 +155,8 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   nothing. It can raise confidence by 0.1 with matching names. `text` and `data` are generic, so a
   read tool taking them gets a false write: measured, `search_docs(text)` on a read-only purpose
   is an APL-007 medium **violation** at 0.6, not only a flag. The conflict keeps its verdict by design
-  (see 2 above), so this false alarm is the price of that guard. Its rate on real tools is
-  unmeasured (E5).
+  (see 2 above), so this false alarm is the price of that guard. E6 measures it on a worst-case
+  block; the rate on real tools is still unmeasured.
 - **C3 [HEURISTIC] Name vocabulary in v2.** publish, push, notify, broadcast, relay and forward are
   network and write (data leaves the system); subscribe and ping are network only. Matching is by
   token anywhere in the name, so a noun such as `get_forward_rules` also matches. "request" is
@@ -261,6 +261,56 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   - **A real number needs a new held-out set with schemas:** real tools with their `inputSchema`,
     labelled before any classifier result is seen, and measured once. The false-conflict rate on
     real read tools is the main unknown (C2).
+
+- **E6 [HEURISTIC] Held-out set #3 (2026-10-30).** `tests/fixtures/tool_corpus_holdout3.yaml`, 36
+  tools with parameter names, the first corpus to exercise schema signals. Each `inputSchema` is
+  built from `params` (type object, string properties, no descriptions) and goes through the real
+  parser. Measured once on classifier v2, with no classifier or label changes and no floor. It
+  shares no names with the earlier corpora. Per its header, it was written after set #2's misses
+  were known and before v2 results were seen.
+
+  | held-out #3 (36) | exact    | missing  | extra    | unclassified | missing + unclassified |
+  |------------------|----------|----------|----------|--------------|------------------------|
+  | name only        | 11 (31%) | 4 (11%)  | 2 (6%)   | 19 (53%)     | 23 (64%)               |
+  | name+schema      | 10 (28%) | 4 (11%)  | 13 (36%) | 9 (25%)      | 13 (36%)               |
+
+  Every miss, name only. **Missing:** `browse_catalog` (read; got network), `view_page` (network),
+  `get_report` and `list_items` (execute). **Extra:** `fetch_secret` (network), `handle_upload`
+  (delete, execute, read). **Unclassified:** `retrieve_invoice`, `peek_queue`, `summarize_thread`,
+  `open_file`, `validate_data`, `preview_content`, `stash_note`, `amend_record`, `enrol_student`,
+  `annotate_file`, `expunge_record`, `clear_inbox`, `prune_branches`, `perform_task`, `orchestrate`,
+  `compute`, `kick_off_build`, `probe_endpoint`, `contact_host`.
+
+  Every miss, name+schema. **Missing:** `browse_catalog` (read; got network), `validate_data` and
+  `preview_content` (read; got unknown+write), `probe_endpoint` (read; got unknown+network).
+  **Extra:** `fetch_secret` (network), `handle_upload` (delete, execute, read), `search_docs`,
+  `find_matches`, `count_words` and `lookup_definition` (write), and, with only `unknown` extra,
+  `stash_note`, `amend_record`, `annotate_file`, `perform_task`, `orchestrate`, `compute`,
+  `contact_host`. **Unclassified:** `retrieve_invoice`, `peek_queue`, `summarize_thread`, `open_file`,
+  `enrol_student`, `expunge_record`, `clear_inbox`, `prune_branches`, `kick_off_build`.
+
+  **False alarms, the 6 read tools with generic parameter names.** Counted as a capability beyond
+  read, ignoring `unknown`: **0/6 name only, 6/6 (100%) name+schema.** Verdict on a read-only
+  purpose: name only gives 4 no finding and 2 low reviews (`validate_data`, `preview_content`,
+  both unclassified); name+schema gives **4 medium violations** (`search_docs`, `find_matches`,
+  `count_words`, `lookup_definition`, each a conflict at 0.6) and the same 2 low reviews.
+
+  Reading the table:
+  - Schema signals cut tools with no answer from 19 to 9, and the stricter view from 23 to 13.
+  - Missing stayed at 4 but the names differ. Schema fixed `view_page`, `get_report` and `list_items`.
+    The three new misses each lack only `read` and keep `unknown`, so they stay in review and are
+    not silent. They were unclassified before.
+  - Exact fell by one, net: `search_docs`, `find_matches`, `count_words` and `lookup_definition` lost
+    it to the false write, and `view_page`, `get_report` and `list_items` gained it. The bucket also
+    understates schema help: 7 of the 13 extras hold the right capability and are extra only because
+    `unknown` is kept by design (C2).
+  - `text`, `data` and `content` are poor write signals: every one of the six tools tripped on them.
+    The block was built to test this, so 100% is the rate on this worst case, not on read
+    tools generally.
+
+  **Limits.** This is hand-written, not real tools, and 36 tools is small. `search_docs(text)` was
+  already known to false-alarm (C2) before this set was read, so that one result was no surprise.
+  Any change made after seeing these misses turns this set into a development set too (E5).
 
 ## Rules (Phase 2)
 

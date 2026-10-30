@@ -1,0 +1,54 @@
+# HELD-OUT #3 (with parameter names). Never tune against this file or edit labels.
+# params = parameter names of the tool's inputSchema (all strings).
+# ambiguous: true => widest plausible set.
+# Written after set #2 misses were known and before classifier v2 results were seen.
+
+# read
+- {name: retrieve_invoice, params: [invoice_id], expected: [read]}
+- {name: lookup_order, params: [order_id], expected: [read]}
+- {name: browse_catalog, params: [category, limit, offset], expected: [read]}
+- {name: peek_queue, params: [queue_name], expected: [read]}
+- {name: summarize_thread, params: [thread_id], expected: [read]}
+- {name: open_file, params: [path], expected: [read]}
+- {name: fetch_secret, params: [secret_name], expected: [read]}
+
+# read tools with generic parameter names (tests false alarms)
+- {name: search_docs, params: [text, limit], expected: [read]}
+- {name: find_matches, params: [text], expected: [read]}
+- {name: count_words, params: [text], expected: [read]}
+- {name: validate_data, params: [data], expected: [read]}
+- {name: preview_content, params: [content], expected: [read]}
+- {name: lookup_definition, params: [text], expected: [read]}
+
+# write
+- {name: stash_note, params: [title, content], expected: [write]}
+- {name: amend_record, params: [record_id, body], expected: [write]}
+- {name: enrol_student, params: [student_id, course_id], expected: [write]}
+- {name: annotate_file, params: [path, content], expected: [write]}
+- {name: draft_reply, params: [thread_id, text], expected: [write]}
+- {name: save_settings, params: [path, content], expected: [write]}
+
+# delete
+- {name: expunge_record, params: [record_id], expected: [delete]}
+- {name: clear_inbox, params: [folder], expected: [delete]}
+- {name: prune_branches, params: [repo, older_than_days], expected: [delete]}
+
+# execute (unfamiliar names; the schema is the main clue)
+- {name: perform_task, params: [command], expected: [execute]}
+- {name: orchestrate, params: [script, args], expected: [execute]}
+- {name: compute, params: [code], expected: [execute]}
+- {name: operate_shell, params: [cmd, cwd], expected: [execute]}
+- {name: kick_off_build, params: [project, target], expected: [execute]}
+- {name: run_diagnostics, params: [], expected: [execute]}
+
+# network
+- {name: relay_payload, params: [url, body], expected: [network, write]}
+- {name: probe_endpoint, params: [url], expected: [network, read]}
+- {name: broadcast_update, params: [webhook_url, message], expected: [network, write]}
+- {name: contact_host, params: [host, port], expected: [network]}
+- {name: view_page, params: [url], expected: [network, read]}
+
+# name and schema disagree or are ambiguous (widest plausible set)
+- {name: get_report, params: [sql_query], expected: [read, execute], ambiguous: true}
+- {name: list_items, params: [command], expected: [read, execute], ambiguous: true}
+- {name: handle_upload, params: [file, destination_url], expected: [write, network], ambiguous: true}

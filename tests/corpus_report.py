@@ -12,6 +12,7 @@ Each tool lands in exactly one bucket:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import yaml
@@ -39,13 +40,19 @@ def bucket(expected: set[Capability], got: set[Capability]) -> str:
     return "extra"
 
 
-def report(title: str, entries: list[dict]) -> dict[str, list[str]]:
+def name_only(entry: dict) -> Tool:
+    return Tool(name=entry["name"])
+
+
+def report(
+    title: str, entries: list[dict], build: Callable[[dict], Tool] = name_only
+) -> dict[str, list[str]]:
     """Classify, print a report naming every miss, and return {bucket: [names]}."""
     out: dict[str, list[str]] = {b: [] for b in BUCKETS}
     lines = []
     for e in entries:
         expected = {Capability(c) for c in e["expected"]}
-        got = classify_tool(Tool(name=e["name"])).capabilities
+        got = classify_tool(build(e)).capabilities
         b = bucket(expected, got)
         out[b].append(e["name"])
         if b != "exact":
