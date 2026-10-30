@@ -233,6 +233,23 @@ def test_conflict_keeps_the_apl007_verdict():
     assert verdict(t("delete_repository", "content")) == ("violation", Severity.HIGH)
 
 
+@pytest.mark.parametrize("parameter", ["url", "host", "target_url", "hostname"])
+def test_browse_with_a_url_or_host_parameter_is_network_without_a_conflict(parameter):
+    r = t("browse_page", parameter)
+    assert r.capabilities == {C.READ, C.NETWORK} and r.classification_flags == []
+    assert r.classification_confidence == pytest.approx(0.8)
+
+
+def test_browse_with_ordinary_parameters_is_not_network():
+    r = t("browse_catalog", "category", "limit", "offset")
+    assert r.capabilities == {C.READ}
+    assert r.classification_confidence == pytest.approx(0.8)
+
+
+def test_a_url_on_another_read_name_is_still_a_conflict():
+    assert t("get_status", "url").classification_flags == [CONFLICT_FLAG]
+
+
 def apl007_verdict(tool):
     purpose = ServerPurpose(server="s", required_capabilities={C.READ})
     agent = AgentSpec(name="a", purpose="p", servers=[purpose])

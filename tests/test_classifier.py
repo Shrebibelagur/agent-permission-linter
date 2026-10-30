@@ -90,6 +90,19 @@ def test_run_query_on_a_database_is_not_read_leaning():
     assert C.EXECUTE in r.capabilities and r.classification_confidence == 0.7
 
 
+@pytest.mark.parametrize("name", ["browse_catalog", "browse_files", "browse"])
+def test_browse_alone_is_a_read(name):
+    assert t(name).capabilities == {C.READ}
+
+
+@pytest.mark.parametrize(
+    "name", ["browse_web", "browse_website", "browse_webpage", "browse_url", "http_browse",
+             "browseInternet"]
+)
+def test_browse_with_web_vocabulary_is_network(name):
+    assert t(name).capabilities == {C.READ, C.NETWORK}
+
+
 def test_bare_request_is_not_guessed():
     assert t("request").capabilities == {C.UNKNOWN}
 

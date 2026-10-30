@@ -97,7 +97,6 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
     Capability.NETWORK: (
         "fetch",
         "http",
-        "browse",
         "navigate",
         "download",
         "curl",
@@ -138,6 +137,7 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "count",
         "check",
         "inspect",
+        "browse",  # network only with web vocabulary or a url/host parameter
     ),
 }
 
@@ -188,6 +188,9 @@ _MAX_CONFIDENCE = 0.95
 # `run_report` usually reads, but "run" means this could still execute something. Execute stays
 # (a missed capability is the dangerous error) and low confidence sends it to a human.
 _READ_LEANING_RUN_NOUNS = frozenset({"query", "queries", "report", "reports", "search", "searches"})
+
+# `browse_catalog` is a read. These words make it a web browse; http, web and url already match.
+_WEB_WORDS = frozenset({"website", "webpage", "internet"})
 
 # "request" alone is a work item as often as a network call (approve_request, change_request).
 # It counts as network only straight after one of these.
@@ -288,6 +291,11 @@ def classify_tool(tool: Tool) -> Tool:
             reasons.append("CONFLICT: readOnlyHint=true contradicts name; annotation ignored")
 
     signals = schema_signals(tool.parameters, toks, caps)
+    if "browse" in toks and Capability.NETWORK not in caps:
+        web_word = next(iter(_WEB_WORDS.intersection(toks)), None)
+        if web_word or Capability.NETWORK in signals.strong:
+            caps.add(Capability.NETWORK)
+            reasons.append(f"'browse' with {web_word or 'a url/host parameter'!r} -> network")
     review: list[str] = []
     if not caps:
         # No guess: a made-up default would look like a real classification. Surface it instead.
