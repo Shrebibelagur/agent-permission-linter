@@ -1,9 +1,10 @@
 """Classifier report on HELD-OUT set #2 (tests/fixtures/tool_corpus_holdout2.yaml).
 
 Buckets: see corpus_report.py (exact / missing / extra / unclassified, plus the stricter
-missing + unclassified view). Report only: NO floor yet. Never tune the classifier against this
-file or edit its labels to fit. Names that also appear in an earlier corpus are listed, because
-they are not independent.
+missing + unclassified view). Report only: NO floor yet. Now a DEVELOPMENT set: its misses were
+seen before classifier v2 (docs/ASSUMPTIONS.md E5), so it does not measure accuracy. Still never
+tune against this file or edit its labels to fit. Names that also appear in an earlier corpus are
+listed, because they are not independent.
 
 Run `pytest -s tests/test_classifier_holdout2.py` to see the report.
 """

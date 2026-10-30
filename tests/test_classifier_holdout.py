@@ -1,8 +1,9 @@
 """Classifier report on the HELD-OUT corpus (tests/fixtures/tool_corpus_holdout.yaml).
 
-Buckets: see corpus_report.py. Never tune the classifier against this file or edit its labels
-to fit. Also reports the held-out names that do NOT appear in the main corpus separately,
-because only those are truly unseen.
+Buckets: see corpus_report.py. Now a DEVELOPMENT set: its misses were seen before classifier v2
+(docs/ASSUMPTIONS.md E5), so it guards regressions and does not measure accuracy. Still never tune
+against this file or edit its labels to fit. Also reports the held-out names that do NOT appear
+in the main corpus separately, because they were not in the original set.
 
 Run `pytest -s tests/test_classifier_holdout.py` to see the report.
 """

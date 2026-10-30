@@ -89,8 +89,9 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   `inputSchema` (required, `type: "object"`), `outputSchema?`, `annotations?`, `_meta?`. Only
   `tools/call`, `resources/read` and `prompts/get` responses can be `input_required`.
   **Parser change:** `tools_list.py` now accepts a missing `resultType` or `"complete"`. It rejects
-  any other value without echoing it, because it is untrusted server output. We still read only
-  `name`, `description` and `annotations`. `ttlMs`, `cacheScope` and `nextCursor` are ignored:
+  any other value without echoing it, because it is untrusted server output. We read `name`,
+  `description`, `annotations` and, since classifier v2, property names from `inputSchema` (C2).
+  `ttlMs`, `cacheScope` and `nextCursor` are ignored:
   offline files are assumed to hold the full list.
   Sources: https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2026-07-28/schema.ts ,
   https://modelcontextprotocol.io/specification/2026-07-28/server/tools
@@ -131,6 +132,41 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   tool cannot be shown to be less powerful. Corpus reports give it its own `unclassified` bucket,
   kept out of `missing` because it is flagged, not silent. They also print
   `missing + unclassified` as the stricter view.
+
+- **C2 [HEURISTIC] `inputSchema` signals (`schema_signals.py`).** Vocabulary chosen from general
+  knowledge of parameter naming, not from the corpora. Each parameter is judged by its head noun, so
+  `command_id` is an id, and `code` needs no qualifier or a language-like one, so `zip_code` is
+  ignored. `query`/`statement` are execute only with a database word in the name or parameters;
+  `sql` always is. Paths are write with a write name or a content parameter, otherwise read.
+  Walks `properties` and array `items`, bounded. **Does not follow** `$ref`, `anyOf`, `oneOf` or
+  `allOf`, so parameters there are not seen.
+  **Combining.** Read words (id, limit, offset, filter, read-side path, plain query) are weak: they
+  support a read name and never conflict, because `update_issue(id)` is normal. Strong words all in
+  the name's set raise confidence by 0.1 (cap 0.95). A strong word outside it takes the widest set,
+  flags `name/schema conflict` and caps confidence at 0.6.
+  **Untrusted input.** A schema is server output, so: (1) it only adds capabilities (S5);
+  (2) a conflict stays above the rules' 0.5 line, because at or below it a server could add a
+  `content` parameter to soften a `delete_*` violation into a review; (3) agreement cannot lift a
+  tool over that line; (4) with an unknown name, strong words add to `unknown` rather than replacing
+  it, at confidence 0.5, and read words add nothing; (5) only names are kept, and only vocabulary
+  words reach reason strings. Schema `default` and `enum` values are never read, as they can hold
+  secrets. Descriptions are scanned for injection markers, raising the existing warning, then dropped.
+  **Known weaknesses.** A server can still omit or rename parameters, so a clean schema proves
+  nothing. It can raise confidence by 0.1 with matching names. `text` and `data` are generic, so a
+  read tool taking them gets a false write: measured, `search_docs(text)` on a read-only purpose
+  is an APL-007 medium **violation** at 0.6, not only a flag. The conflict keeps its verdict by design
+  (see 2 above), so this false alarm is the price of that guard. Its rate on real tools is
+  unmeasured (E5).
+- **C3 [HEURISTIC] Name vocabulary in v2.** publish, push, notify, broadcast, relay and forward are
+  network and write (data leaves the system); subscribe and ping are network only. Matching is by
+  token anywhere in the name, so a noun such as `get_forward_rules` also matches. "request" is
+  network only straight after http, https, api, web, network, rest, graphql, ajax, url or remote; a
+  bare `request` is unclassified. `run_<query|report|search>` with no database word adds read, keeps
+  execute and gets confidence 0.5. Execute stays because a missed capability is the dangerous error
+  and dropping it would hide the tool from APL-010. **Known evasion:** the tool name is server-chosen.
+  Measured on a read-only purpose, `run_pipeline` is an APL-007 high violation and `run_report` is a
+  low review at 0.5, so renaming a tool softens the verdict. The same is true of any name that
+  gets confidence 0.5.
 
 - **E1 [HEURISTIC]** `tests/fixtures/tool_corpus.yaml` holds 48 tool names with hand labels (9 are
   ambiguous and labelled with the widest plausible set). Labels were not changed when the
@@ -211,6 +247,20 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   not edited. Held-out #1: `run_report` missing → exact. Held-out #2: `publish_event` and
   `push_notification` missing → exact; `ping_host` and `forward_message` unclassified → exact;
   `approve_request` extra → exact. **These numbers are not an accuracy gain:** see E5.
+
+- **E5 [HEURISTIC] What v2 measures, and what it does not.** E4 is a regression check only.
+  - **Schema signals are unmeasured.** The corpora are names only, so `inputSchema` signals (C2)
+    played no part in E4. Their only evidence is synthetic unit tests, which show the code does what
+    it was written to do, not that it is right on real tools.
+  - **Held-out #1 and #2 are now development sets.** Their misses were seen before v2 was written:
+    E3 lists them by name, and steps 3 to 5 use the same words (publish, push, ping, forward,
+    `approve_request`, `run_report`). Every name that moved on them is a known miss, so the movement
+    is expected, not measured. E2's and E3's numbers stay valid for the classifier they measured.
+  - The name changes were general vocabulary and were not fitted to corpus entries, but that
+    does not make these sets independent again.
+  - **A real number needs a new held-out set with schemas:** real tools with their `inputSchema`,
+    labelled before any classifier result is seen, and measured once. The false-conflict rate on
+    real read tools is the main unknown (C2).
 
 ## Rules (Phase 2)
 
