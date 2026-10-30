@@ -15,12 +15,19 @@ import re
 
 from apl.models import Capability, Inventory, RuleResult, Severity
 from apl.rules.base import ASI03, LLM06, is_uncertain, kind_confidence, make_finding, skip
-from apl.scopemap import LABEL, suggest_replacements
+from apl.scopemap import (
+    LABEL,
+    NO_DELETE,
+    UNVERIFIED_CONFIDENCE,
+    UNVERIFIED_DELETE,
+    suggest_replacements,
+)
 
 RULE_ID = "APL-001"
 C = Capability
 
-# Graph: {resource}.{operation}[.{constraint}]. "ReadWrite" = read, create, update and delete.
+# Graph: {resource}.{operation}[.{constraint}]. "ReadWrite" = read, create, update and delete,
+# except permissions the docs show otherwise (scopemap.NO_DELETE).
 _GRAPH = re.compile(r"^[A-Za-z]+\.(?P<op>[A-Za-z]+)(?:\.[A-Za-z]+)?$")
 _GRAPH_OPS: dict[str, frozenset[Capability]] = {
     "Read": frozenset({C.READ}),
@@ -56,9 +63,10 @@ def scope_capabilities(scope: str) -> frozenset[Capability] | None:
     if scope in _GITHUB:
         return _GITHUB[scope]
     m = _GRAPH.match(scope)
-    if m:
-        return _GRAPH_OPS.get(m.group("op"))
-    return None
+    if not m:
+        return None
+    caps = _GRAPH_OPS.get(m.group("op"))
+    return caps - {C.DELETE} if caps and scope in NO_DELETE else caps
 
 
 def _narrower(scopes: list[str], needed: set[Capability]) -> str:
@@ -112,6 +120,10 @@ def check(inv: Inventory) -> RuleResult:
                 status = "review_required"
                 conf = min(conf, 0.4)
                 why += f"; {len(uncertain)} unclassified/low-confidence tool(s) may need it"
+            deleters = {s for s, caps in over if C.DELETE in caps}
+            if deleters and deleters <= UNVERIFIED_DELETE:  # R2: delete rests on unclear docs
+                conf = min(conf, UNVERIFIED_CONFIDENCE)
+                why += f"; delete unverified in Graph docs for {', '.join(sorted(deleters))}"
             scopes = [s for s, _ in over]
             res.findings.append(
                 make_finding(

@@ -59,6 +59,13 @@ MINIMUM_PERMISSIONS: dict[str, dict[Capability, MinPermission]] = {
 }
 
 
+# Exceptions to "ReadWrite grants delete" in APL-001, from the docs. ASSUMPTIONS.md R2 has the
+# source for each. Anything not listed keeps the wider mapping.
+NO_DELETE = frozenset({"User.ReadWrite"})
+UNVERIFIED_DELETE = frozenset({"User.DeleteRestore.All"})  # delete kept, findings less confident
+UNVERIFIED_CONFIDENCE = 0.6
+
+
 def minimum_permission(resource: str, capability: Capability) -> MinPermission | None:
     return MINIMUM_PERMISSIONS.get(resource, {}).get(capability)
 
