@@ -46,7 +46,7 @@ MINIMUM_PERMISSIONS: dict[str, dict[Capability, MinPermission]] = {
         C.WRITE: MinPermission("User.ReadWrite", "User.ReadWrite.All"),
         C.DELETE: _same("User.DeleteRestore.All"),
     },
-    # Directory.ReadWrite.All does not allow deleting users or groups, so no DELETE row.
+    # No DELETE row: no one permission is the minimum (see NO_DELETE and docs/ASSUMPTIONS.md R2).
     "Directory": {
         C.READ: _same("Directory.Read.All"),
         C.WRITE: _same("Directory.ReadWrite.All"),

@@ -220,10 +220,30 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   APL-001 maps operations to the capabilities they add over `Read`: Read/ReadBasic → read;
   ReadWrite/Manage/FullControl/AccessAsUser → write+delete; Create/Migrate → write. Any other
   operation is skipped with "missing scope mapping". Constraints (`.All`, `.OwnedBy`) are not yet
-  scored. Added in Phase 3: Send → network, DeleteRestore → delete. **Known overstatement:**
-  `User.ReadWrite.All` and `Directory.ReadWrite.All` count as delete under this rule, but the
-  reference says Directory.ReadWrite.All cannot delete users or groups (G11), so such a finding
-  can be rated high where medium is right. Source: https://learn.microsoft.com/en-us/graph/permissions-overview
+  scored. Added in Phase 3: Send → network, DeleteRestore → delete.
+  Source: https://learn.microsoft.com/en-us/graph/permissions-overview
+
+  **Delete evidence, per permission (checked 2026-10-30).** The operation-level rule above stays
+  the default. Each permission in `scopemap.py` that it gave delete was checked against the
+  permissions reference (https://learn.microsoft.com/en-us/graph/permissions-reference) and the
+  delete API page for its resource. This corrects an earlier note here, which called
+  `User.ReadWrite.All` and `Directory.ReadWrite.All` overstated without reading those pages.
+
+  | Permission | Status | Evidence |
+  |---|---|---|
+  | `Mail.ReadWrite` | verified: delete | Listed. https://learn.microsoft.com/en-us/graph/api/message-delete?view=graph-rest-1.0 |
+  | `Files.ReadWrite` | verified: delete | Listed. https://learn.microsoft.com/en-us/graph/api/driveitem-delete?view=graph-rest-1.0 |
+  | `Files.ReadWrite.All` | verified: delete | Listed. https://learn.microsoft.com/en-us/graph/api/driveitem-delete?view=graph-rest-1.0 |
+  | `Calendars.ReadWrite` | verified: delete | Listed. https://learn.microsoft.com/en-us/graph/api/event-delete?view=graph-rest-1.0 |
+  | `User.ReadWrite.All` | verified: delete | Listed, as the least-privileged permission; not enough for users holding privileged admin roles. https://learn.microsoft.com/en-us/graph/api/user-delete?view=graph-rest-1.0 |
+  | `Application.ReadWrite.All` | verified: delete | Listed for applications and service principals. https://learn.microsoft.com/en-us/graph/api/application-delete?view=graph-rest-1.0 , https://learn.microsoft.com/en-us/graph/api/serviceprincipal-delete?view=graph-rest-1.0 |
+  | `Application.ReadWrite.OwnedBy` | verified: delete | Listed as least privileged, application type only. The reference limits it to apps it owns. https://learn.microsoft.com/en-us/graph/api/application-delete?view=graph-rest-1.0 |
+  | `Directory.ReadWrite.All` | verified: delete, service principals only | The reference says it does not allow user or group deletion, and the user and group pages omit it, but Delete servicePrincipal lists it. Not corrected, because the docs show a delete it allows. https://learn.microsoft.com/en-us/graph/api/serviceprincipal-delete?view=graph-rest-1.0 , https://learn.microsoft.com/en-us/graph/api/group-delete?view=graph-rest-1.0 |
+  | `User.ReadWrite` | corrected: no delete | Delete a user lists only `User.ReadWrite.All`, on v1.0 and beta; the reference describes reading and updating your own profile. **Judgment call:** it can delete the signed-in user's own photo, which we count as a profile update (write), not deleting an object. https://learn.microsoft.com/en-us/graph/api/user-delete?view=graph-rest-1.0 , https://learn.microsoft.com/en-us/graph/api/profilephoto-delete?view=graph-rest-1.0 |
+  | `User.DeleteRestore.All` | unverified | The reference says it deletes and restores all users, but Delete a user does not list it on v1.0 or beta. Delete is kept, and findings cap confidence at 0.6. https://learn.microsoft.com/en-us/graph/api/user-delete?view=graph-rest-1.0 |
+
+  Permissions outside `scopemap.py` (e.g. `Group.ReadWrite.All`, `Mail.ReadWrite.Shared`) were not
+  checked and keep the operation-level mapping.
 - **R3 [HEURISTIC] — GitHub scopes verified.** repo/public_repo/user/gist/write:packages → write;
   delete_repo/delete:packages → delete; admin:org/admin:repo_hook → write+delete; read:org/read:user
   → read; workflow → write+execute (workflow files run code in CI; the execute part is our
@@ -350,9 +370,10 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   delegated and application availability; `Files.Read` and `User.Read` have no application form, so
   those rows differ. Narrower options exist but cover only part of a resource and are not offered:
   `Mail.ReadBasic`, `Calendars.ReadBasic`, `User.ReadBasic.All`. `Mail.ReadWrite` "does not include
-  permission to send mail", hence the separate `Mail.Send` row. `Directory.ReadWrite.All` "does not
-  allow" user or group deletion, so Directory has no delete row and User uses
-  `User.DeleteRestore.All`. `Application.ReadWrite.OwnedBy` is application-only and cannot manage
+  permission to send mail", hence the separate `Mail.Send` row. Directory has no delete row because
+  no single permission is the minimum there: `Directory.ReadWrite.All` cannot delete users or groups,
+  and service principals have the narrower `Application.ReadWrite.OwnedBy` (see R2). User uses
+  `User.DeleteRestore.All`, which R2 marks unverified. `Application.ReadWrite.OwnedBy` is application-only and cannot manage
   apps it does not own. Source: https://learn.microsoft.com/en-us/graph/permissions-reference
 - **G12 [HEURISTIC] Secrets in this path.** Three independent layers. (1) `secretText`, `hint`, `key`
   and failure-response bodies are never copied, so they cannot reach output. (2) `redact()` also
