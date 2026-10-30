@@ -4,7 +4,7 @@ import pytest
 from builders import cred, inventory, server, tool
 
 from apl.classifier import classify_tool
-from apl.models import CredentialKind, Evidence, Severity, Tool
+from apl.models import CredentialKind, Evidence, Severity, Tool, ToolAnnotations
 from apl.rules.apl001_overscoped import check, scope_capabilities
 
 READ_TOOLS = [tool("search_repositories"), tool("get_file_contents")]
@@ -219,6 +219,80 @@ def test_review_names_a_bounded_number_of_tools():
     [f] = mail_findings(*tools)
     assert "search_e" in f.confidence_reason and "search_f" not in f.confidence_reason
     assert "and 3 more" in f.confidence_reason
+
+
+def annotated(name, *parameters, **hints):
+    tool = Tool(name=name, parameters=list(parameters), annotations=ToolAnnotations(**hints))
+    return classify_tool(tool)
+
+
+def verdicts(*tools, scopes):
+    return [(f.status, f.granted) for f in mail_findings(*tools, scopes=scopes)]
+
+
+def test_get_status_url_with_mail_send_is_review_not_no_finding():
+    tool = named("get_status", "url")
+    [f] = mail_findings(tool, scopes=("Mail.Send",))
+    assert f.status == "review_required" and "get_status" in f.confidence_reason
+    assert f.subject == "mail/AZURE_CLIENT_ID/low-confidence"
+
+
+def test_open_world_annotation_with_mail_send_is_review_not_no_finding():
+    tool = annotated("list_things", openWorldHint=True)
+    assert verdicts(tool, scopes=("Mail.Send",)) == [("review_required", ["Mail.Send"])]
+
+
+def test_annotation_cannot_launder_a_conflict():
+    """openWorldHint supplies network first, so `url` agrees and no conflict flag is set."""
+    tool = annotated("get_status", "url", openWorldHint=True)
+    assert "name/schema conflict" not in tool.classification_flags
+    assert verdicts(tool, scopes=("Mail.Send",)) == [("review_required", ["Mail.Send"])]
+
+
+def test_annotation_cannot_launder_a_weak_write():
+    """readOnlyHint=false supplies write first, so `content` agrees at raised confidence."""
+    tool = annotated("get_x", "content", readOnlyHint=False)
+    assert tool.classification_confidence > 0.5
+    assert verdicts(tool, scopes=("Mail.ReadWrite",)) == [("review_required", ["Mail.ReadWrite"])]
+
+
+def test_read_only_false_alone_is_only_a_possible_need():
+    tool = annotated("get_x", readOnlyHint=False)
+    assert verdicts(tool, scopes=("Mail.ReadWrite",)) == [("review_required", ["Mail.ReadWrite"])]
+
+
+def test_annotation_on_an_unknown_name_is_only_a_possible_need():
+    tool = annotated("frobnicate", destructiveHint=True)
+    assert verdicts(tool, scopes=("delete_repo",)) == [("review_required", ["delete_repo"])]
+
+
+def test_conflict_makes_every_capability_of_the_tool_possible_only():
+    assert verdicts(named("create_issue", "url"), scopes=("repo",)) == [
+        ("review_required", ["repo"])
+    ]
+
+
+@pytest.mark.parametrize(
+    "tool",
+    [
+        named("send_mail"),
+        named("send_mail", "to", "body"),
+        annotated("send_mail", openWorldHint=True),
+    ],
+    ids=["name", "agreeing-schema", "agreeing-annotation"],
+)
+def test_strong_agreeing_signals_give_no_finding(tool):
+    assert mail_findings(tool, scopes=("Mail.Send", "Mail.ReadWrite")) == []
+
+
+def test_annotation_confirming_the_name_is_no_finding():
+    tool = annotated("delete_branch", destructiveHint=True)
+    assert mail_findings(tool, scopes=("delete_repo",)) == []
+
+
+def test_review_can_still_be_a_violation_for_scopes_nothing_may_need():
+    found = verdicts(named("get_status", "url"), scopes=("Mail.Send", "delete_repo"))
+    assert found == [("violation", ["delete_repo"]), ("review_required", ["Mail.Send"])]
 
 
 def test_scope_table():
