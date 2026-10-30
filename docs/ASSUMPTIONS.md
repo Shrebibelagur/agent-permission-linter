@@ -159,8 +159,8 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   **Known weaknesses.** A server can still omit or rename parameters, so a clean schema proves
   nothing. It can raise confidence by 0.1 with matching names. A weak write still gives a read
   tool a false `write`: since E7 that is a low review under APL-007, not a violation, but a real
-  writer named like a reader is softened the same way. **Open defect, see E7:** that false `write`
-  can suppress APL-001 for the whole server.
+  writer named like a reader is softened the same way. That false `write` used to suppress APL-001
+  for the whole server; fixed, see E7.
 - **C3 [HEURISTIC] Name vocabulary in v2.** publish, push, notify, broadcast, relay and forward are
   network and write (data leaves the system); subscribe and ping are network only. Matching is by
   token anywhere in the name, so a noun such as `get_forward_rules` also matches. "request" is
@@ -343,13 +343,37 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   (6/6). The verdict does. On a read-only purpose APL-007 went from 4 medium violations and 2 low
   reviews to **6 low reviews, 0 violations**, at confidence 0.5.
 
-  **Open defect: a false write suppresses APL-001. Measured, not fixed.** APL-001 builds `needed`
-  from every tool's capabilities and does not look at confidence. A server with read-only tools and
-  `Mail.ReadWrite` is a high violation; give one tool a `text` parameter and it is **no finding**. It
-  is present since v2 and unchanged by this step. It is a false negative on the rule that catches
-  over-scoping, and a server can trigger it on purpose by adding one parameter. The fix belongs in
-  APL-001 (ignore low-confidence capabilities when computing `needed`), which was out of scope.
-  Any tool the classifier is unsure of has the same effect.
+  **Defect: a false write suppressed APL-001. Fixed (2026-10-30).** APL-001 built its needs from
+  every tool's capabilities and ignored confidence. A server with read-only tools and
+  `Mail.ReadWrite` was a high violation; one tool with a `text` parameter made it **no finding**, and
+  a server could trigger that on purpose. It was present since v2. APL-001 now separates confident
+  from possible needs (R4). Measured on `Mail.ReadWrite` unless stated:
+
+  | Server | Before | After |
+  |--------|--------|-------|
+  | read-only tools | violation, high, 0.9 | unchanged |
+  | one tool takes `text` | **no finding** | review_required, high, 0.4 |
+  | a tool is `unknown` + write | **no finding** | review_required, high, 0.4 |
+  | `send_mail` present | no finding | unchanged |
+  | `run_report` present | review_required, high, 0.4 | violation, high, 0.9 |
+  | `delete_repo` scope, one tool takes `text` | review_required, high, 0.4 | violation, high, 0.9 |
+  | `repo` scope, `delete_repository(content)` | violation, medium, 0.9 | unchanged |
+
+  Tests in `tests/rules/test_apl001.py`: `test_read_only_tools_with_mail_readwrite_is_a_violation`,
+  `test_one_text_parameter_gives_review_not_no_finding`,
+  `test_partially_classified_tool_gives_review_not_no_finding`,
+  `test_strong_write_signal_send_mail_is_no_finding`,
+  `test_delete_repository_with_content_keeps_its_verdict`,
+  `test_low_confidence_tool_cannot_soften_a_scope_it_cannot_need`,
+  `test_read_leaning_run_does_not_soften_the_server`,
+  `test_one_credential_can_give_a_violation_and_a_review`. The `mail-triage` demo finding and the
+  report snapshots did not change.
+
+  **Still open, a narrower form.** A name/schema conflict has confidence 0.6, which meets the
+  threshold, so a strong schema word justifies a scope. `get_status(url)` gives `network` and hides
+  a `Mail.Send` finding. Only strong words do this, and only for the scope they match. Pinned by
+  `test_known_limit_a_conflict_at_the_threshold_counts_as_confident`. Annotations can do the same,
+  since they count at full confidence.
 
 ## Rules (Phase 2)
 
@@ -413,11 +437,15 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   → read; workflow → write+execute (workflow files run code in CI; the execute part is our
   inference). Source: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
 - **R4 [HEURISTIC] APL-001.** A scope is over-scoped when none of the capabilities it adds is
-  needed by any classified tool on the same server. Static configs never contain granted scopes,
+  needed by a tool on the same server. A tool with confidence ≥ 0.6 and no `unknown` gives a
+  confident need; any other tool gives a possible need, and an `unknown` tool could need anything.
+  Each scope is judged alone: a confident need means no finding; only a possible need means
+  `review_required`, naming the tools, with subject `<server>/<credential>/low-confidence`; neither
+  means a violation. One credential can give both. Static configs never contain granted scopes,
   so runs without `--entra`/`--entra-mock` skip with "missing granted scopes". Confidence is 0.9 × a kind
-  factor (verified 1.0, inferred 0.75, unknown 0.6). Any uncertain tool on the server makes the
-  finding `review_required` with confidence ≤ 0.4. Severity is high if the excess includes
-  delete or execute, otherwise medium.
+  factor (verified 1.0, inferred 0.75, unknown 0.6), capped at 0.4 for a review. Severity is high if
+  the excess includes delete or execute, otherwise medium, so a review keeps that severity and counts
+  toward `--fail-on` at it (R11).
 - **R5 [HEURISTIC] APL-002.** Any secret in a static client config is one fixed token for every
   invoker of that agent instance. This holds whatever the kind; a `${input:...}` prompt still
   yields one token per client. Who invokes the agent comes from a new optional agent.yaml field,
