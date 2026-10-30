@@ -1,8 +1,9 @@
 """Capability classifier.
 
-Deterministic. Combines (a) tool-name verb heuristics and (b) MCP annotations.
-Annotations are UNTRUSTED hints (MCP spec says clients must not rely on them for security
-decisions from untrusted servers), so they can only ADD capabilities, never remove them:
+Deterministic. Combines (a) tool-name verb heuristics, (b) MCP annotations and (c) inputSchema
+parameter names (ASSUMPTION C2).
+Annotations and schemas are UNTRUSTED (MCP spec says clients must not rely on annotations for
+security decisions from untrusted servers), so they can only ADD capabilities, never remove them:
 a tool named `delete_repo` with readOnlyHint=true stays DELETE and is flagged as conflicting.
 Descriptions are NOT used for classification (prompt-injection surface).
 A name with no recognised verb is NOT guessed: it gets {UNKNOWN}, confidence 0 and a review flag.
@@ -10,9 +11,8 @@ A name with no recognised verb is NOT guessed: it gets {UNKNOWN}, confidence 0 a
 
 from __future__ import annotations
 
-import re
-
 from apl.models import Capability, Tool
+from apl.schema_signals import DB_NOUNS, schema_signals, tokens
 
 _VERBS: dict[Capability, tuple[str, ...]] = {
     Capability.DELETE: (
@@ -158,8 +158,17 @@ _AMBIGUOUS_VERBS: dict[str, frozenset[Capability]] = {
     ),
 }
 
-# A query against a database usually means arbitrary SQL, not a fixed read.
-_DB_NOUNS = frozenset({"database", "db", "sql", "sqlite", "postgres", "postgresql", "mysql"})
+CONFLICT_FLAG = "name/schema conflict"
+SCHEMA_ONLY_FLAG = "schema only: review required"
+# Rules stop convicting at confidence <= 0.5 (rules.base.LOW_CONFIDENCE). A schema is written by
+# the server, so a conflict must stay above that line: otherwise adding a `content` parameter
+# would turn a `delete_repo` violation into a low-severity review. A schema also cannot lift a
+# low-confidence tool over the line, or win a tool with an unknown name a hard verdict.
+_CONFLICT_CONFIDENCE = 0.6
+_SCHEMA_ONLY_CONFIDENCE = 0.5
+_UNCERTAIN_BELOW = 0.5
+_AGREE_BONUS = 0.1
+_MAX_CONFIDENCE = 0.95
 
 # Two-word nouns whose parts would otherwise match verbs ("request" -> network, "merge" -> write).
 _COMPOUND_NOUNS: dict[tuple[str, str], str] = {
@@ -168,12 +177,6 @@ _COMPOUND_NOUNS: dict[tuple[str, str], str] = {
     ("merge", "request"): "merge_request",
     ("merge", "requests"): "merge_request",
 }
-
-_SPLIT = re.compile(r"[_\-.\s/:]+|(?<=[a-z0-9])(?=[A-Z])")
-
-
-def tokens(name: str) -> list[str]:
-    return [t.lower() for t in _SPLIT.split(name) if t]
 
 
 def _join_compounds(toks: list[str]) -> list[str]:
@@ -188,6 +191,10 @@ def _join_compounds(toks: list[str]) -> list[str]:
             out.append(toks[i])
             i += 1
     return out
+
+
+def _schema_reasons(found: dict[Capability, str]) -> list[str]:
+    return [f"schema parameter {word!r} -> {cap.value}" for cap, word in found.items()]
 
 
 def classify_tool(tool: Tool) -> Tool:
@@ -210,7 +217,7 @@ def classify_tool(tool: Tool) -> Tool:
                 f"ambiguous verb {t!r} -> widest plausible set "
                 f"{sorted(c.value for c in amb)}"
             )
-    if "query" in toks and _DB_NOUNS.intersection(toks) and Capability.EXECUTE not in caps:
+    if "query" in toks and DB_NOUNS.intersection(toks) and Capability.EXECUTE not in caps:
         caps.add(Capability.EXECUTE)
         reasons.append("'query' on a database noun -> execute (may run arbitrary SQL)")
 
@@ -243,17 +250,35 @@ def classify_tool(tool: Tool) -> Tool:
         }:
             reasons.append("CONFLICT: readOnlyHint=true contradicts name; annotation ignored")
 
+    signals = schema_signals(tool.parameters, toks, caps)
     review: list[str] = []
     if not caps:
         # No guess: a made-up default would look like a real classification. Surface it instead.
         caps = {Capability.UNKNOWN}
         reasons.append("no recognised verb -> unknown")
-        review.append(UNCLASSIFIED_FLAG)
         confidence = 0.0
-    elif not specific and ambiguous_hit:
-        confidence = 0.5
+        if signals.strong:
+            # Only adds: UNKNOWN stays, so rules keep treating the tool as unreviewed. A read-only
+            # schema adds nothing, like a readOnlyHint: it cannot make an unknown tool look safe.
+            caps |= set(signals.strong)
+            reasons += _schema_reasons(signals.strong)
+            review.append(SCHEMA_ONLY_FLAG)
+            confidence = _SCHEMA_ONLY_CONFIDENCE
+        else:
+            review.append(UNCLASSIFIED_FLAG)
     else:
-        confidence = 0.9 if a is not None else 0.7
+        confidence = 0.5 if not specific and ambiguous_hit else 0.9 if a is not None else 0.7
+        beyond_name = set(signals.strong) - caps
+        if beyond_name:
+            caps |= beyond_name
+            reasons += _schema_reasons({c: signals.strong[c] for c in beyond_name})
+            reasons.append("CONFLICT: schema shows more than the name; widest set kept")
+            review.append(CONFLICT_FLAG)
+            confidence = min(confidence, _CONFLICT_CONFIDENCE)
+        elif signals.strong or (signals.weak_read and Capability.READ in caps):
+            reasons.append("schema agrees with the name")
+            if confidence > _UNCERTAIN_BELOW:
+                confidence = min(confidence + _AGREE_BONUS, _MAX_CONFIDENCE)
 
     return tool.model_copy(
         update={

@@ -37,7 +37,11 @@ def build_inventory(
         srv.tools = [classify_tool(t) for t in src]
         srv.tools_source = "fixture"
         for t in srv.tools:
-            if injection_suspected(t.description or "") or injection_suspected(t.name):
+            if (
+                injection_suspected(t.description or "")
+                or injection_suspected(t.name)
+                or t.schema_injection_suspected
+            ):
                 warnings.append(f"{srv.name}/{t.name}: possible prompt injection in tool metadata")
 
     spec = load_agent_spec(agent) if agent else None
