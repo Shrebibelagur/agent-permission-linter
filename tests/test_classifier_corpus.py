@@ -29,6 +29,11 @@ def test_bucket_definitions():
     assert bucket({W}, {D}) == "missing"  # riskier prediction still misses write
     assert bucket({W}, {R, W}) == "extra"
     assert bucket({W}, {Capability.UNKNOWN}) == "unclassified"
+    U = Capability.UNKNOWN
+    assert bucket({W}, {U, W}) == "partial"
+    assert bucket({W, Capability.NETWORK}, {U, W, Capability.NETWORK}) == "partial"
+    assert bucket({W}, {U, W, D}) == "extra"  # a false addition beside unknown
+    assert bucket({R}, {U, W}) == "missing"  # unknown does not excuse the wrong capability
 
 
 def test_classifier_accuracy_report():

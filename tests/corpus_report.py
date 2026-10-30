@@ -5,7 +5,9 @@ Each tool lands in exactly one bucket:
   exact   - predicted set == label
   missing - at least one labelled capability is not predicted (DANGEROUS: the linter would
             understate what the tool can do, even if it predicts something riskier)
-  extra   - every labelled capability is predicted, plus more (NOISY: false alarms only)
+  extra   - every labelled capability is predicted, plus a false addition (NOISY: false alarms)
+  partial - the label is predicted exactly, with `unknown` retained beside it: partially
+            classified, and still reviewed. Not a false addition: `unknown` is kept by design.
   unclassified - classifier returned {unknown} with a review flag. Not silent, so it is kept out
             of "missing"; the report also prints "missing + unclassified" as the stricter view.
 """
@@ -23,7 +25,7 @@ from apl.models import Capability, Tool
 FIXTURES = Path(__file__).parent / "fixtures"
 MAIN = FIXTURES / "tool_corpus.yaml"
 HOLDOUT = FIXTURES / "tool_corpus_holdout.yaml"
-BUCKETS = ("exact", "missing", "extra", "unclassified")
+BUCKETS = ("exact", "missing", "extra", "partial", "unclassified")
 
 
 def load(path: Path) -> list[dict]:
@@ -37,6 +39,8 @@ def bucket(expected: set[Capability], got: set[Capability]) -> str:
         return "unclassified"
     if not expected <= got:
         return "missing"
+    if got - {Capability.UNKNOWN} == expected:
+        return "partial"
     return "extra"
 
 
