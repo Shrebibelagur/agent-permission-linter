@@ -27,10 +27,10 @@ That fixture is deliberately over-powered. Excerpt of `report.md` (full report:
 |---|---:|---:|
 | critical | 0 | 0 |
 | high | 2 | 0 |
-| medium | 2 | 0 |
+| medium | 3 | 0 |
 | low | 0 | 1 |
 | info | 0 | 0 |
-| **total** | **4** | **1** |
+| **total** | **5** | **1** |
 
 | ID | Severity | Status | Confidence | Tool / server | Title |
 |---|---|---|---:|---|---|
@@ -38,6 +38,7 @@ That fixture is deliberately over-powered. Excerpt of `report.md` (full report:
 | `APL-007:809789a2e28a` | high | violation | 0.90 | `graph/runGraphQuery` | Tool capability exceeds declared purpose |
 | `APL-007:c07f49f8482e` | medium | violation | 0.70 | `filesystem/move_file` | Tool capability exceeds declared purpose |
 | `APL-007:ac981277f1c4` | medium | violation | 0.70 | `filesystem/write_file` | Tool capability exceeds declared purpose |
+| `APL-007:13097d7d2403` | medium | violation | 0.70 | `github/push_files` | Tool capability exceeds declared purpose |
 | `APL-007:6eb85aaeb952` | low | review_required | 0.00 | `graph/frobnicate` | Review required: tool capability could not be established |
 
 | Rule | Subject | Reason |

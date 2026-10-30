@@ -89,6 +89,10 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "invite",
         "publish",
         "email",  # sending mail creates a message, like send/post
+        "notify",
+        "broadcast",
+        "relay",
+        "forward",
     ),
     Capability.NETWORK: (
         "fetch",
@@ -110,6 +114,14 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
         "email",
         "upload",
         "post",
+        "publish",
+        "push",
+        "notify",
+        "broadcast",
+        "relay",
+        "forward",
+        "subscribe",  # inbound, so network only
+        "ping",  # reachability only, so network only
     ),
     Capability.READ: (
         "get",

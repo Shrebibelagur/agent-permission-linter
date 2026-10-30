@@ -20,7 +20,7 @@ def test_sections_present(fix):
 
 def test_summary_counts_and_table(fix):
     md = render_markdown(dirty(fix))
-    assert "| **total** | **4** | **1** |" in md
+    assert "| **total** | **5** | **1** |" in md
     assert "| ID | Severity | Status | Confidence | Tool / server | Title |" in md
     assert "`github/delete_repository`" in md and "| high | violation | 0.90 |" in md
 

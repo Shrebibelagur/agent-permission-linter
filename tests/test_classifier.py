@@ -72,6 +72,20 @@ def test_network_family(name, expected):
 
 @pytest.mark.parametrize(
     "name",
+    ["publish_article", "push_branch", "notify_team", "broadcast_alert", "relay_payload",
+     "forward_invoice"],
+)
+def test_outbound_vocabulary_is_network_and_write(name):
+    assert t(name).capabilities == {C.NETWORK, C.WRITE}
+
+
+@pytest.mark.parametrize("name", ["subscribe_topic", "ping_server"])
+def test_inbound_or_probe_vocabulary_is_network_only(name):
+    assert t(name).capabilities == {C.NETWORK}
+
+
+@pytest.mark.parametrize(
+    "name",
     ["migrate_schema", "cleanup_temp", "clean_cache", "reset_device", "handle_webhook",
      "install_plugin", "uninstall_app"],
 )

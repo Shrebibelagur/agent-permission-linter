@@ -11,10 +11,10 @@
 |---|---:|---:|
 | critical | 0 | 0 |
 | high | 2 | 0 |
-| medium | 2 | 0 |
+| medium | 3 | 0 |
 | low | 0 | 1 |
 | info | 0 | 0 |
-| **total** | **4** | **1** |
+| **total** | **5** | **1** |
 
 Checks: 3 evaluated, 6 not evaluated; see [Not evaluated](#not-evaluated).
 
@@ -26,6 +26,7 @@ Checks: 3 evaluated, 6 not evaluated; see [Not evaluated](#not-evaluated).
 | `APL-007:809789a2e28a` | high | violation | 0.90 | `graph/runGraphQuery` | Tool capability exceeds declared purpose |
 | `APL-007:c07f49f8482e` | medium | violation | 0.70 | `filesystem/move_file` | Tool capability exceeds declared purpose |
 | `APL-007:ac981277f1c4` | medium | violation | 0.70 | `filesystem/write_file` | Tool capability exceeds declared purpose |
+| `APL-007:13097d7d2403` | medium | violation | 0.70 | `github/push_files` | Tool capability exceeds declared purpose |
 | `APL-007:6eb85aaeb952` | low | review_required | 0.00 | `graph/frobnicate` | Review required: tool capability could not be established |
 
 ## Fixes
@@ -60,6 +61,14 @@ Disable or remove 'write_file' (write not in the declared purpose: Read CHANGELO
 
 - Confidence 0.70: classifier: name token 'write' -> write
 - Granted: write; required: read
+- Suggested mapping: [LLM06:2025 Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
+
+### APL-007:13097d7d2403: github/push_files
+
+Disable or remove 'push_files' (network not in the declared purpose: Read PRs; create one issue with the draft.), or use a server build without it. If the agent really needs it, declare it in agent.yaml.
+
+- Confidence 0.70: classifier: name token 'push' -> write; name token 'push' -> network
+- Granted: network, write; required: read, write
 - Suggested mapping: [LLM06:2025 Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
 
 ### APL-007:6eb85aaeb952: graph/frobnicate

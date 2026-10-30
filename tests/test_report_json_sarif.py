@@ -30,7 +30,7 @@ def test_json_finding_and_skip_shape(fix):
     f = data["findings"][0]
     assert set(f) >= {"id", "rule_id", "severity", "status", "subject", "fix", "confidence",
                       "confidence_reason", "suggested_mappings", "evidence"}
-    assert data["summary"]["findings"] == len(data["findings"]) == 5
+    assert data["summary"]["findings"] == len(data["findings"]) == 6
     assert all(s["reason"].startswith("not evaluated: missing ") for s in data["not_evaluated"])
     assert data["limits"]["low_confidence_tools"][0]["tool"] == "frobnicate"
 
@@ -42,7 +42,7 @@ def test_sarif_structure(fix):
     rule_ids = [r["id"] for r in run["tool"]["driver"]["rules"]]
     assert {"APL-001", "APL-002", "APL-007", "APL-010"} <= set(rule_ids)
     results = run["results"]
-    assert len(results) == 5
+    assert len(results) == 6
     for r in results:
         assert run["tool"]["driver"]["rules"][r["ruleIndex"]]["id"] == r["ruleId"]
         assert r["level"] in {"error", "warning", "note"}

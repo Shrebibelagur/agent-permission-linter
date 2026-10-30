@@ -26,9 +26,12 @@ def test_positive_tool_exceeds_declared_capabilities():
 
 
 def test_required_tools_only_defines_purpose():
+    res = run([tool("get_file_contents"), tool("create_issue"), tool("update_issue")],
+              required_tools=["get_file_contents", "create_issue"])
+    assert res.findings == []  # update_issue is write, already covered by create_issue
     res = run([tool("get_file_contents"), tool("create_issue"), tool("push_files")],
               required_tools=["get_file_contents", "create_issue"])
-    assert res.findings == []  # push_files is write, already covered by create_issue
+    assert [f.subject for f in res.findings] == ["github/push_files"]  # adds network
     res = run([tool("get_file_contents"), tool("delete_branch")],
               required_tools=["get_file_contents"])
     assert [f.subject for f in res.findings] == ["github/delete_branch"]
@@ -87,6 +90,7 @@ def test_dirty_fixture(fix):
         "github/delete_repository",
         "filesystem/write_file",
         "filesystem/move_file",
+        "github/push_files",
         "graph/runGraphQuery",
     }
     assert review == {"graph/frobnicate"}
