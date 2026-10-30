@@ -1,6 +1,5 @@
 """Entra client: token flow, the read-only guard, and no credential in any error."""
 
-import json
 from pathlib import Path
 from urllib.parse import parse_qs
 
@@ -157,5 +156,6 @@ def test_error_message_has_path_not_query():
     c = GraphClient(lambda: ACCESS, transport)
     with pytest.raises(EntraError) as e:
         c.get("https://graph.microsoft.com/v1.0/applications?$skiptoken=abc")
-    assert str(e.value) == "Graph HTTP 403 for /v1.0/applications"
-    assert json.dumps(str(e.value)).count("skiptoken") == 0
+    assert str(e.value).startswith("Graph HTTP 403 for /v1.0/applications")
+    assert "Application.Read.All" in str(e.value)  # says what to fix
+    assert "skiptoken" not in str(e.value)

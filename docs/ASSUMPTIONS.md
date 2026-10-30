@@ -263,6 +263,75 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   flagged yet. A tool that is auto-approved on a server declared `approval_gate: true` in
   agent.yaml raises severity one level (medium→high, high→critical).
 
+## Entra collector (Phase 3)
+
+All checked 2026-10-30 against Microsoft Learn. **Nothing here has been run against a real tenant:**
+tests use responses shaped from the docs' examples, so live behaviour itself is **unverified**.
+
+- **G1 [SPEC] Token — verified.** `POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token`,
+  form-encoded `client_id`, `client_secret`, `scope=https://graph.microsoft.com/.default`,
+  `grant_type=client_credentials`. Response: `access_token`, `expires_in`, `token_type`. Errors carry
+  `error` plus free-text `error_description`; we report only the HTTP status and a validated
+  `error`. The token POST uses its own client, so the Graph client's guard has no exception: it
+  refuses anything but `GET https://graph.microsoft.com/...`. That also stops a hostile
+  `@odata.nextLink` receiving the bearer token. Commercial cloud only; national clouds are not
+  supported. Source: https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-client-creds-grant-flow
+- **G2 [SPEC] Permissions for the scanner — corrected.** `.env.example` listed `AuditLog.Read.All`,
+  which only sign-in activity needs (G8), so it was removed. Least privilege for what we call:
+  `Application.Read.All` (applications, service principals, owners, appRoleAssignments) plus
+  `Directory.Read.All` (`oauth2PermissionGrants`, for which it is the least-privileged permission
+  listed). Env vars are `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET`, replacing the `APL_`-prefixed
+  names. Sources: https://learn.microsoft.com/en-us/graph/api/application-list?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/oauth2permissiongrant-list?view=graph-rest-1.0
+- **G3 [SPEC] Applications and service principals — verified.** `GET /applications`,
+  `GET /servicePrincipals`. `id` is the object id; `appId` is the client id, which is what configs
+  hold. `passwordCredentials[]` and `keyCredentials[]` both have `keyId` and `endDateTime`.
+  `secretText` is returned only by the initial `addPassword` POST; `hint` holds the secret's first
+  three characters. We copy neither, nor `key`. **We send no `$select`:** the list pages say selecting
+  `keyCredentials` returns `key` and carries a 150 requests/minute tenant limit. (The keyCredential
+  page disagrees, saying `key` is single-object only. Not selecting avoids both.)
+  `servicePrincipalType` is `Application`, `ManagedIdentity`, `Legacy`, `ServiceIdentity` or
+  `SocialIdp`. Lists may also return agent identity blueprint objects, handled the same way.
+  Sources: https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/resources/serviceprincipal?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/resources/passwordcredential?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0
+- **G4 [SPEC] Delegated grants — verified.** `GET /oauth2PermissionGrants`. `clientId` and
+  `resourceId` are service principal **object ids, not appIds**. `scope` is space-separated.
+  `consentType` is `AllPrincipals` or `Principal` (one user). Both count as granted; they are kept
+  apart so a per-user grant is not reported as tenant-wide.
+  Source: https://learn.microsoft.com/en-us/graph/api/resources/oauth2permissiongrant?view=graph-rest-1.0
+- **G5 [SPEC] Application permissions — verified.** `GET /servicePrincipals/{id}/appRoleAssignments`
+  lists roles granted **to** this SP (`appRoleAssignedTo` is the reverse). An assignment holds only
+  a GUID `appRoleId`; the name is `value` in the `appRoles` of the SP at `resourceId`. The all-zero
+  GUID means no specific role. A role id that does not resolve is kept as
+  `unresolved-app-role-<id>`, so APL-001 skips it visibly. The Mail.ReadWrite application role id in
+  our fixture, `e2a3a72e-5f79-4c64-b1b1-878b674786c9`, matches the permissions reference.
+  Sources: https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list-approleassignments?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/resources/approleassignment?view=graph-rest-1.0
+- **G6 [SPEC] Owners — verified.** `GET /applications/{id}/owners` and
+  `GET /servicePrincipals/{id}/owners`. We take the union of both, and keep ids only: without
+  user-read rights other fields come back null, and names are personal data. An app registered in
+  another tenant has only a service principal here.
+  Sources: https://learn.microsoft.com/en-us/graph/api/application-list-owners?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list-owners?view=graph-rest-1.0
+- **G7 [SPEC] Paging and throttling — verified.** Use the whole `@odata.nextLink` in a GET until it
+  is absent; a page may be empty. 429 carries `Retry-After` in seconds; with no header, the docs
+  recommend exponential backoff. **Our choices [HEURISTIC]:** 6 attempts; backoff 1s doubling to 60s;
+  5xx treated like 429; an HTTP-date `Retry-After` is also accepted; a wait over 300s stops the scan
+  rather than retrying early. Paging keeps the last good `nextLink` on retry, as the docs advise.
+  Sources: https://learn.microsoft.com/en-us/graph/paging ,
+  https://learn.microsoft.com/en-us/graph/throttling
+- **G8 [SPEC] Sign-in activity — unverified, not collected.** Search snippets show beta
+  `GET /reports/servicePrincipalSignInActivities` needing `AuditLog.Read.All`. It was optional, is
+  beta only, and no rule uses it, so it is left out. The page itself was not read.
+  Source: https://learn.microsoft.com/en-us/graph/api/reportroot-list-serviceprincipalsigninactivities?view=graph-rest-beta
+- **G9 [HEURISTIC] Trust.** Graph responses are tenant-controlled data. Display names and scope
+  values are redacted and truncated on ingest. A resource counts as Graph only by the well-known
+  appId `00000003-0000-0000-c000-000000000000`, never by name; other APIs' scopes become
+  `<resource>/<scope>` so `Mail.Read` on a custom API cannot pass as the Graph permission.
+  Per-object calls run only for apps a scan links to, to limit throttling.
+
 ## Reports (`apl scan`)
 
 - **R9 [SPEC] SARIF 2.1.0 — verified.** Output for the clean and dirty fixtures validates with 0
