@@ -98,6 +98,9 @@ class Tool(BaseModel):
     name: str
     description: str | None = None  # UNTRUSTED - wrap before any LLM use
     annotations: ToolAnnotations | None = None
+    # From inputSchema: property names only (ASSUMPTION C2). UNTRUSTED; the schema is not kept.
+    parameters: list[str] = Field(default_factory=list)
+    schema_injection_suspected: bool = False
     capabilities: set[Capability] = Field(default_factory=set)
     classification_reasons: list[str] = Field(default_factory=list)
     classification_confidence: float = 0.0

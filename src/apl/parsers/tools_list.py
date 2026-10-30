@@ -13,6 +13,7 @@ from typing import Any
 
 from apl.models import Tool, ToolAnnotations
 from apl.parsers.mcp_config import ConfigParseError
+from apl.schema_signals import extract_parameters
 
 
 def _check_result_type(obj: dict[str, Any]) -> None:
@@ -34,6 +35,7 @@ def _tools_from(obj: Any) -> list[Tool] | None:
             if not isinstance(t, dict) or not isinstance(t.get("name"), str):
                 continue
             ann = t.get("annotations")
+            parameters, suspected = extract_parameters(t.get("inputSchema"))
             out.append(
                 Tool(
                     name=t["name"][:200],
@@ -43,6 +45,8 @@ def _tools_from(obj: Any) -> list[Tool] | None:
                     annotations=ToolAnnotations.model_validate(ann)
                     if isinstance(ann, dict)
                     else None,
+                    parameters=parameters,
+                    schema_injection_suspected=suspected,
                 )
             )
         return out
