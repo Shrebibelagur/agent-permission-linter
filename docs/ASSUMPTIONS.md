@@ -244,6 +244,16 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
 
   Permissions outside `scopemap.py` (e.g. `Group.ReadWrite.All`, `Mail.ReadWrite.Shared`) were not
   checked and keep the operation-level mapping.
+
+  **Before and after (2026-10-30).** APL-001 run for each permission on a server with read-only
+  tools and a verified credential. Severity logic did not change. The other eight permissions are
+  unchanged: delete+write, high, 0.90. The `mail-triage` demo finding and the report snapshots are
+  also unchanged.
+
+  | Permission | Before | After |
+  |---|---|---|
+  | `User.ReadWrite` | delete+write, high, 0.90 | write, medium, 0.90 |
+  | `User.DeleteRestore.All` | delete, high, 0.90 | delete, high, 0.60 |
 - **R3 [HEURISTIC] — GitHub scopes verified.** repo/public_repo/user/gist/write:packages → write;
   delete_repo/delete:packages → delete; admin:org/admin:repo_hook → write+delete; read:org/read:user
   → read; workflow → write+execute (workflow files run code in CI; the execute part is our
