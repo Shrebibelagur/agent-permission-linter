@@ -1,8 +1,9 @@
 import json
 
+import pytest
 from builders import cred, inventory, server, tool
 
-from apl.models import Evidence, Severity
+from apl.models import CredentialKind, Evidence, Severity
 from apl.rules.apl001_overscoped import check, scope_capabilities
 
 READ_TOOLS = [tool("search_repositories"), tool("get_file_contents")]
@@ -83,6 +84,59 @@ def test_evidence_is_redacted():
     )
     res = check(inventory(server(tools=READ_TOOLS, creds=[c])))
     assert leak not in json.dumps(res.model_dump(mode="json"))
+
+
+def graph_finding(scope, tools=("listUsers",)):
+    c = cred(
+        env="AZURE_CLIENT_ID",
+        kind=CredentialKind.SERVICE_PRINCIPAL,
+        granted_scopes=[scope] if isinstance(scope, str) else scope,
+    )
+    res = check(inventory(server("graph", tools=[tool(t) for t in tools], creds=[c])))
+    return res.findings[0]
+
+
+def test_corrected_user_readwrite_has_no_delete_and_still_write():
+    assert scope_capabilities("User.ReadWrite") == {"write"}
+    f = graph_finding("User.ReadWrite")
+    assert f.severity is Severity.MEDIUM and "needs write." in f.fix
+
+
+def test_corrected_permission_cannot_justify_a_delete_tool():
+    f = graph_finding("User.ReadWrite", tools=("deleteUser",))
+    assert f.granted == ["User.ReadWrite"]  # it does not grant what the tool needs
+
+
+@pytest.mark.parametrize(
+    "scope",
+    [
+        "Mail.ReadWrite",
+        "Files.ReadWrite",
+        "Files.ReadWrite.All",
+        "Calendars.ReadWrite",
+        "User.ReadWrite.All",
+        "Directory.ReadWrite.All",  # service principals only: see ASSUMPTIONS R2
+        "Application.ReadWrite.All",
+        "Application.ReadWrite.OwnedBy",
+    ],
+)
+def test_confirmed_delete_is_kept(scope):
+    assert scope_capabilities(scope) == {"write", "delete"}
+    f = graph_finding(scope)
+    assert f.severity is Severity.HIGH and f.confidence == 0.9
+
+
+def test_unverified_keeps_delete_with_lower_confidence():
+    assert scope_capabilities("User.DeleteRestore.All") == {"delete"}
+    f = graph_finding("User.DeleteRestore.All")
+    assert f.severity is Severity.HIGH and f.status == "violation"
+    assert f.confidence == 0.6
+    assert "delete unverified in Graph docs for User.DeleteRestore.All" in f.confidence_reason
+
+
+def test_verified_delete_alongside_keeps_full_confidence():
+    f = graph_finding(["User.DeleteRestore.All", "Mail.ReadWrite"])
+    assert f.confidence == 0.9 and "unverified" not in f.confidence_reason
 
 
 def test_scope_table():

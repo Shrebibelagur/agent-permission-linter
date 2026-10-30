@@ -42,6 +42,18 @@ def test_over_scoped_mail_app(report):
     assert f.evidence[0].pointer.startswith("/servicePrincipals/")
 
 
+def test_mail_triage_demo_finding_is_pinned(report):
+    """The README demo: exact id, severity, confidence and wording."""
+    [f] = findings_for(report, "mail")
+    assert f.id == "APL-001:d02e76c2cf43"
+    assert (f.severity, f.confidence) == (Severity.HIGH, 0.9)
+    assert f.confidence_reason == "credential kind verified"
+    assert f.fix == (
+        "Remove or narrow Mail.ReadWrite: no tool on 'mail' needs delete/write. "
+        "Grant the least-privileged permission instead (suggested mapping): Mail.Read."
+    )
+
+
 def test_correctly_scoped_calendar_app(report):
     """Calendars.Read, granted by delegated consent, and read-only tools."""
     assert findings_for(report, "calendar") == []
