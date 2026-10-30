@@ -97,7 +97,6 @@ _VERBS: dict[Capability, tuple[str, ...]] = {
     Capability.NETWORK: (
         "fetch",
         "http",
-        "request",
         "browse",
         "navigate",
         "download",
@@ -182,7 +181,14 @@ _UNCERTAIN_BELOW = 0.5
 _AGREE_BONUS = 0.1
 _MAX_CONFIDENCE = 0.95
 
-# Two-word nouns whose parts would otherwise match verbs ("request" -> network, "merge" -> write).
+# "request" alone is a work item as often as a network call (approve_request, change_request).
+# It counts as network only straight after one of these.
+_REQUEST_WORDS = frozenset({"request", "requests"})
+_NETWORK_QUALIFIERS = frozenset(
+    {"http", "https", "api", "web", "network", "rest", "graphql", "ajax", "url", "remote"}
+)
+
+# Two-word nouns whose parts would otherwise match verbs ("merge" -> write).
 _COMPOUND_NOUNS: dict[tuple[str, str], str] = {
     ("pull", "request"): "pull_request",
     ("pull", "requests"): "pull_request",
@@ -218,6 +224,10 @@ def classify_tool(tool: Tool) -> Tool:
         if hit:
             caps.add(cap)
             reasons.append(f"name token {hit[0]!r} -> {cap.value}")
+    for before, word in zip(toks, toks[1:], strict=False):
+        if word in _REQUEST_WORDS and before in _NETWORK_QUALIFIERS:
+            caps.add(Capability.NETWORK)
+            reasons.append(f"name compound '{before} {word}' -> network")
     specific = bool(caps)
     ambiguous_hit = False
     for t in toks:

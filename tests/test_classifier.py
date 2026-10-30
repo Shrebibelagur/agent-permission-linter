@@ -40,11 +40,41 @@ def test_name_heuristics(name, expected):
         ("get_merge_request", {C.READ}),  # "merge" is part of the noun here
         ("listPullRequests", {C.READ}),
         ("merge_merge_requests", {C.WRITE}),
-        ("http_request", {C.NETWORK}),  # bare "request" still network
+        ("http_request", {C.NETWORK}),
     ],
 )
 def test_step_b_verbs_and_compounds(name, expected):
     assert t(name).capabilities == expected
+
+
+@pytest.mark.parametrize(
+    "name", ["http_request", "api_request", "webRequest", "network_requests", "rest_request"]
+)
+def test_request_is_network_in_network_compounds(name):
+    assert C.NETWORK in t(name).capabilities
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("get_pull_request", {C.READ}),
+        ("create_merge_request", {C.WRITE}),
+        ("approve_request", {C.WRITE}),
+        ("get_change_request", {C.READ}),
+        ("create_feature_request", {C.WRITE}),
+        ("list_requests", {C.READ}),
+    ],
+)
+def test_request_alone_is_not_network(name, expected):
+    assert t(name).capabilities == expected
+
+
+def test_bare_request_is_not_guessed():
+    assert t("request").capabilities == {C.UNKNOWN}
+
+
+def test_request_must_directly_follow_the_qualifier():
+    assert C.NETWORK not in t("list_api_change_requests").capabilities
 
 
 @pytest.mark.parametrize(
