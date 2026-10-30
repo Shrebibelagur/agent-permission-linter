@@ -1,8 +1,9 @@
 """Classifier report on HELD-OUT set #3 (tests/fixtures/tool_corpus_holdout3.yaml).
 
 The first corpus with parameter names, so the first that exercises schema signals. Reports each
-split twice, name only and name+schema, plus the false-alarm block. Report only: NO floor. Never
-tune the classifier against this file or edit its labels to fit.
+split twice, name only and name+schema, plus the false-alarm block. Report only: NO floor. Now a
+DEVELOPMENT set: changes were made from its misses (docs/ASSUMPTIONS.md E7), so it does not measure
+accuracy. Still never edit its labels to fit.
 
 Run `pytest -s tests/test_classifier_holdout3.py` to see the report.
 """

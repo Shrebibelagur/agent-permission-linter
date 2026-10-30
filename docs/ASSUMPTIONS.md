@@ -137,11 +137,16 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   knowledge of parameter naming, not from the corpora. Each parameter is judged by its head noun, so
   `command_id` is an id, and `code` needs no qualifier or a language-like one, so `zip_code` is
   ignored. `query`/`statement` are execute only with a database word in the name or parameters;
-  `sql` always is. Paths are write with a write name or a content parameter, otherwise read.
+  `sql` always is. Paths are write with a write name, otherwise read.
   Walks `properties` and array `items`, bounded. **Does not follow** `$ref`, `anyOf`, `oneOf` or
   `allOf`, so parameters there are not seen.
   **Combining.** Read words (id, limit, offset, filter, read-side path, plain query) are weak: they
-  support a read name and never conflict, because `update_issue(id)` is normal. Strong words all in
+  support a read name and never conflict, because `update_issue(id)` is normal. Generic data words
+  (text, data, content, body, payload) are weak writes: on a read-only name with no strong signal
+  they add write at confidence 0.5 and flag `weak write signal: review required`; on a write name
+  they agree; on an unknown name they add to `unknown`; anywhere else they add nothing. They do not
+  lower confidence on a riskier name, or `delete_repository(content)` would become a review.
+  Strong words all in
   the name's set raise confidence by 0.1 (cap 0.95). A strong word outside it takes the widest set,
   flags `name/schema conflict` and caps confidence at 0.6.
   **Untrusted input.** A schema is server output, so: (1) it only adds capabilities (S5);
@@ -152,11 +157,10 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   words reach reason strings. Schema `default` and `enum` values are never read, as they can hold
   secrets. Descriptions are scanned for injection markers, raising the existing warning, then dropped.
   **Known weaknesses.** A server can still omit or rename parameters, so a clean schema proves
-  nothing. It can raise confidence by 0.1 with matching names. `text` and `data` are generic, so a
-  read tool taking them gets a false write: measured, `search_docs(text)` on a read-only purpose
-  is an APL-007 medium **violation** at 0.6, not only a flag. The conflict keeps its verdict by design
-  (see 2 above), so this false alarm is the price of that guard. E6 measures it on a worst-case
-  block; the rate on real tools is still unmeasured.
+  nothing. It can raise confidence by 0.1 with matching names. A weak write still gives a read
+  tool a false `write`: since E7 that is a low review under APL-007, not a violation, but a real
+  writer named like a reader is softened the same way. **Open defect, see E7:** that false `write`
+  can suppress APL-001 for the whole server.
 - **C3 [HEURISTIC] Name vocabulary in v2.** publish, push, notify, broadcast, relay and forward are
   network and write (data leaves the system); subscribe and ping are network only. Matching is by
   token anywhere in the name, so a noun such as `get_forward_rules` also matches. "request" is
@@ -166,7 +170,8 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
   and dropping it would hide the tool from APL-010. **Known evasion:** the tool name is server-chosen.
   Measured on a read-only purpose, `run_pipeline` is an APL-007 high violation and `run_report` is a
   low review at 0.5, so renaming a tool softens the verdict. The same is true of any name that
-  gets confidence 0.5.
+  gets confidence 0.5. "browse" alone is a read; it adds network with http, web, url, website,
+  webpage or internet in the name, or a url/host parameter, which then agrees with the name.
 
 - **E1 [HEURISTIC]** `tests/fixtures/tool_corpus.yaml` holds 48 tool names with hand labels (9 are
   ambiguous and labelled with the widest plausible set). Labels were not changed when the
@@ -310,7 +315,41 @@ Verification status (checked 2026-10-29 against official docs; source URL on eac
 
   **Limits.** This is hand-written, not real tools, and 36 tools is small. `search_docs(text)` was
   already known to false-alarm (C2) before this set was read, so that one result was no surprise.
-  Any change made after seeing these misses turns this set into a development set too (E5).
+  Any change made after seeing these misses turns this set into a development set too (E5). E7
+  did that.
+
+- **E7 [HEURISTIC] Classifier v2 follow-up (2026-10-30).** **Held-out #1, #2 and #3 are all
+  development sets.** Weak writes and the `browse` fix came straight from E6's misses, so no set in
+  this repo measures accuracy any more. Numbers below are regression checks. A real number needs a
+  new held-out set, with schemas, labelled blind and measured once, ideally of real tools.
+  Bucket split: **extra** now means a false addition; **partial** means the label is predicted
+  exactly with `unknown` kept beside it. "Before" is commit 67ae845 under the same split; labels
+  and rules are unchanged. Floors hold.
+
+  | exact / missing / extra / partial / unclassified | before       | after        |
+  |--------------------------------------------------|--------------|--------------|
+  | main (48)                                        | 37/2/6/0/3   | 37/2/6/0/3   |
+  | #1 (45)                                          | 33/2/6/0/4   | 33/2/6/0/4   |
+  | #1 not in main (35)                              | 25/1/5/0/4   | 25/1/5/0/4   |
+  | #2 (43)                                          | 26/1/0/0/16  | 26/1/0/0/16  |
+  | #3 name only (36)                                | 11/4/2/0/19  | 12/3/2/0/19  |
+  | #3 name+schema (36)                              | 10/4/6/7/9   | 11/3/6/7/9   |
+
+  One name moved: `browse_catalog` missing → exact, on both #3 rows. The 7 partial tools are the ones
+  E6 listed as extra only because `unknown` is kept. Remaining #3 name+schema extras: `fetch_secret`,
+  `handle_upload` and the four `text` tools.
+
+  **False-alarm block.** The buckets do not change: all 6 tools still gain a write capability
+  (6/6). The verdict does. On a read-only purpose APL-007 went from 4 medium violations and 2 low
+  reviews to **6 low reviews, 0 violations**, at confidence 0.5.
+
+  **Open defect: a false write suppresses APL-001. Measured, not fixed.** APL-001 builds `needed`
+  from every tool's capabilities and does not look at confidence. A server with read-only tools and
+  `Mail.ReadWrite` is a high violation; give one tool a `text` parameter and it is **no finding**. It
+  is present since v2 and unchanged by this step. It is a false negative on the rule that catches
+  over-scoping, and a server can trigger it on purpose by adding one parameter. The fix belongs in
+  APL-001 (ignore low-confidence capabilities when computing `needed`), which was out of scope.
+  Any tool the classifier is unsure of has the same effect.
 
 ## Rules (Phase 2)
 
