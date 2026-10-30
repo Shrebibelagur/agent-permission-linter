@@ -181,6 +181,10 @@ _UNCERTAIN_BELOW = 0.5
 _AGREE_BONUS = 0.1
 _MAX_CONFIDENCE = 0.95
 
+# `run_report` usually reads, but "run" means this could still execute something. Execute stays
+# (a missed capability is the dangerous error) and low confidence sends it to a human.
+_READ_LEANING_RUN_NOUNS = frozenset({"query", "queries", "report", "reports", "search", "searches"})
+
 # "request" alone is a work item as often as a network call (approve_request, change_request).
 # It counts as network only straight after one of these.
 _REQUEST_WORDS = frozenset({"request", "requests"})
@@ -239,6 +243,13 @@ def classify_tool(tool: Tool) -> Tool:
                 f"ambiguous verb {t!r} -> widest plausible set "
                 f"{sorted(c.value for c in amb)}"
             )
+    read_leaning = not DB_NOUNS.intersection(toks) and any(
+        verb == "run" and noun in _READ_LEANING_RUN_NOUNS
+        for verb, noun in zip(toks, toks[1:], strict=False)
+    )
+    if read_leaning:
+        caps.add(Capability.READ)
+        reasons.append("'run' on a query/report/search: read-leaning, execute kept, low confidence")
     if "query" in toks and DB_NOUNS.intersection(toks) and Capability.EXECUTE not in caps:
         caps.add(Capability.EXECUTE)
         reasons.append("'query' on a database noun -> execute (may run arbitrary SQL)")
@@ -289,7 +300,9 @@ def classify_tool(tool: Tool) -> Tool:
         else:
             review.append(UNCLASSIFIED_FLAG)
     else:
-        confidence = 0.5 if not specific and ambiguous_hit else 0.9 if a is not None else 0.7
+        confidence = 0.9 if a is not None else 0.7
+        if read_leaning or (not specific and ambiguous_hit):
+            confidence = 0.5
         beyond_name = set(signals.strong) - caps
         if beyond_name:
             caps |= beyond_name

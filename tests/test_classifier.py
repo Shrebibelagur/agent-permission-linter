@@ -69,6 +69,27 @@ def test_request_alone_is_not_network(name, expected):
     assert t(name).capabilities == expected
 
 
+@pytest.mark.parametrize("name", ["run_query", "run_report", "runSearch", "run_reports"])
+def test_run_on_a_read_noun_is_read_leaning_with_low_confidence(name):
+    r = t(name)
+    assert r.capabilities == {C.READ, C.EXECUTE}
+    assert r.classification_confidence == 0.5
+
+
+def test_annotations_do_not_restore_confidence_for_read_leaning_run():
+    assert t("run_report", readOnlyHint=True).classification_confidence == 0.5
+
+
+def test_run_with_another_noun_stays_execute():
+    r = t("run_pipeline")
+    assert r.capabilities == {C.EXECUTE} and r.classification_confidence == 0.7
+
+
+def test_run_query_on_a_database_is_not_read_leaning():
+    r = t("run_sql_query")
+    assert C.EXECUTE in r.capabilities and r.classification_confidence == 0.7
+
+
 def test_bare_request_is_not_guessed():
     assert t("request").capabilities == {C.UNKNOWN}
 
