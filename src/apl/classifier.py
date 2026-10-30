@@ -171,12 +171,16 @@ _AMBIGUOUS_VERBS: dict[str, frozenset[Capability]] = {
 
 CONFLICT_FLAG = "name/schema conflict"
 SCHEMA_ONLY_FLAG = "schema only: review required"
+WEAK_WRITE_FLAG = "weak write signal: review required"
 # Rules stop convicting at confidence <= 0.5 (rules.base.LOW_CONFIDENCE). A schema is written by
 # the server, so a conflict must stay above that line: otherwise adding a `content` parameter
 # would turn a `delete_repo` violation into a low-severity review. A schema also cannot lift a
 # low-confidence tool over the line, or win a tool with an unknown name a hard verdict.
+# A weak write sits at the line on purpose, but only on a read-only name with no strong signal:
+# anywhere else lowering confidence would soften a verdict the name or a strong signal earned.
 _CONFLICT_CONFIDENCE = 0.6
 _SCHEMA_ONLY_CONFIDENCE = 0.5
+_WEAK_WRITE_CONFIDENCE = 0.5
 _UNCERTAIN_BELOW = 0.5
 _AGREE_BONUS = 0.1
 _MAX_CONFIDENCE = 0.95
@@ -290,11 +294,14 @@ def classify_tool(tool: Tool) -> Tool:
         caps = {Capability.UNKNOWN}
         reasons.append("no recognised verb -> unknown")
         confidence = 0.0
-        if signals.strong:
+        found = dict(signals.strong)
+        if signals.weak_write:
+            found.setdefault(Capability.WRITE, signals.weak_write)
+        if found:
             # Only adds: UNKNOWN stays, so rules keep treating the tool as unreviewed. A read-only
             # schema adds nothing, like a readOnlyHint: it cannot make an unknown tool look safe.
-            caps |= set(signals.strong)
-            reasons += _schema_reasons(signals.strong)
+            caps |= set(found)
+            reasons += _schema_reasons(found)
             review.append(SCHEMA_ONLY_FLAG)
             confidence = _SCHEMA_ONLY_CONFIDENCE
         else:
@@ -310,7 +317,16 @@ def classify_tool(tool: Tool) -> Tool:
             reasons.append("CONFLICT: schema shows more than the name; widest set kept")
             review.append(CONFLICT_FLAG)
             confidence = min(confidence, _CONFLICT_CONFIDENCE)
-        elif signals.strong or (signals.weak_read and Capability.READ in caps):
+        elif signals.weak_write and caps == {Capability.READ}:
+            caps.add(Capability.WRITE)
+            reasons.append(f"weak schema parameter {signals.weak_write!r} -> write, low confidence")
+            review.append(WEAK_WRITE_FLAG)
+            confidence = min(confidence, _WEAK_WRITE_CONFIDENCE)
+        elif (
+            signals.strong
+            or (signals.weak_read and Capability.READ in caps)
+            or (signals.weak_write and Capability.WRITE in caps)
+        ):
             reasons.append("schema agrees with the name")
             if confidence > _UNCERTAIN_BELOW:
                 confidence = min(confidence + _AGREE_BONUS, _MAX_CONFIDENCE)

@@ -70,13 +70,15 @@ def extract_parameters(schema: Any) -> tuple[list[str], bool]:
 @dataclass(frozen=True)
 class SchemaSignals:
     """`strong` maps a capability to the vocabulary word that showed it. `weak_read` is a word that
-    fits a read but says nothing against a write: `update_issue(id)` is not a conflict."""
+    fits a read but says nothing against a write: `update_issue(id)` is not a conflict.
+    `weak_write` is a generic data word: `search_docs(text)` mostly does not write. See C2."""
 
     strong: dict[Capability, str] = field(default_factory=dict)
     weak_read: str | None = None
+    weak_write: str | None = None
 
     def __bool__(self) -> bool:
-        return bool(self.strong) or self.weak_read is not None
+        return bool(self.strong) or self.weak_read is not None or self.weak_write is not None
 
 
 def _head(parameter: str) -> tuple[str, list[str]]:
@@ -101,12 +103,11 @@ def schema_signals(
     """Match parameter names against the vocabularies. Returned words are ours, so no untrusted
     parameter name reaches a reason string."""
     heads = [_head(p) for p in parameters]
-    known_heads = {h for h, _ in heads}
     words = set(name_tokens) | {w for h, q in heads for w in (h, *q)}
     on_database = bool(words & DB_NOUNS)
-    has_content = bool(known_heads & CONTENT_PARAMS)
     strong: dict[Capability, str] = {}
     weak_read: str | None = None
+    weak_write: str | None = None
     for head, qualifiers in heads:
         if head in EXECUTE_PARAMS and _is_code(head, qualifiers):
             strong.setdefault(C.EXECUTE, head)
@@ -115,12 +116,12 @@ def schema_signals(
         elif head in NETWORK_PARAMS:
             strong.setdefault(C.NETWORK, head)
         elif head in CONTENT_PARAMS:
-            strong.setdefault(C.WRITE, head)
+            weak_write = weak_write or head
         elif head in PATH_PARAMS:
-            if has_content or C.WRITE in name_caps:
+            if C.WRITE in name_caps:
                 strong.setdefault(C.WRITE, head)
             else:
                 weak_read = weak_read or head
         elif head in READ_PARAMS or head == "query":
             weak_read = weak_read or head
-    return SchemaSignals(strong, weak_read)
+    return SchemaSignals(strong, weak_read, weak_write)

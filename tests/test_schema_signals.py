@@ -74,8 +74,9 @@ def test_network_words(word):
 
 
 @pytest.mark.parametrize("word", ["content", "body", "data", "text", "payload", "request_body"])
-def test_content_words(word):
-    assert strong(word) == {C.WRITE: word.split("_")[-1]}
+def test_content_words_are_weak_writes(word):
+    s = schema_signals([word], ["frob"], set())
+    assert s.strong == {} and s.weak_write == word.split("_")[-1]
 
 
 @pytest.mark.parametrize("word", ["id", "limit", "offset", "filter", "user_id"])
@@ -90,9 +91,13 @@ def test_path_reads_by_default(word):
     assert s.strong == {} and s.weak_read
 
 
-def test_path_writes_with_a_write_name_or_content_parameter():
+def test_path_writes_with_a_write_name():
     assert strong("path", caps=[C.WRITE]) == {C.WRITE: "path"}
-    assert strong("path", "content") == {C.WRITE: "path"}
+
+
+def test_a_content_parameter_does_not_make_a_path_a_strong_write():
+    s = schema_signals(["path", "content"], ["frob"], set())
+    assert s.strong == {} and s.weak_read == "path" and s.weak_write == "content"
 
 
 def test_sql_is_always_execute():

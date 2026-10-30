@@ -5,7 +5,13 @@ from datetime import UTC, datetime
 
 import pytest
 
-from apl.classifier import CONFLICT_FLAG, SCHEMA_ONLY_FLAG, UNCLASSIFIED_FLAG, classify_tool
+from apl.classifier import (
+    CONFLICT_FLAG,
+    SCHEMA_ONLY_FLAG,
+    UNCLASSIFIED_FLAG,
+    WEAK_WRITE_FLAG,
+    classify_tool,
+)
 from apl.inventory import build_inventory
 from apl.models import (
     AgentSpec,
@@ -80,7 +86,7 @@ def test_conflict_lowers_annotated_confidence_too():
 def test_conflict_cannot_be_used_to_dodge_a_verdict():
     """A server must not turn a violation into a review by adding a `content` parameter."""
     r = t("delete_repository", "content")
-    assert r.capabilities == {C.DELETE, C.WRITE}
+    assert r.capabilities == {C.DELETE}  # weak write: ignored, so nothing softens the name
     assert r.classification_confidence > LOW_CONFIDENCE and not is_uncertain(r)
 
 
@@ -163,7 +169,8 @@ def test_path_is_read_or_write_by_context(tmp_path, parameter):
     assert r.capabilities == {C.WRITE}
     assert r.classification_confidence == pytest.approx(0.8)
     r = parsed(tmp_path, "get_record", schema(**props, content={"type": "string"}))
-    assert C.WRITE in r.capabilities and r.classification_flags == [CONFLICT_FLAG]
+    assert C.WRITE in r.capabilities and r.classification_flags == [WEAK_WRITE_FLAG]
+    assert r.classification_confidence == 0.5
 
 
 def test_conflict_end_to_end(tmp_path):
@@ -224,3 +231,53 @@ def test_conflict_keeps_the_apl007_verdict():
 
     assert verdict(t("delete_repository")) == ("violation", Severity.HIGH)
     assert verdict(t("delete_repository", "content")) == ("violation", Severity.HIGH)
+
+
+def apl007_verdict(tool):
+    purpose = ServerPurpose(server="s", required_capabilities={C.READ})
+    agent = AgentSpec(name="a", purpose="p", servers=[purpose])
+    srv = MCPServer(name="s", tools=[tool], evidence=Evidence(source="c"))
+    inv = Inventory(agent=agent, servers=[srv], generated_at=datetime.now(UTC))
+    return [(f.status, f.severity) for f in apl007(inv).findings]
+
+
+@pytest.mark.parametrize("parameter", ["text", "data", "content", "body", "payload"])
+def test_weak_write_on_a_read_name_is_a_low_review(parameter):
+    r = t("search_docs", parameter)
+    assert r.capabilities == {C.READ, C.WRITE}
+    assert r.classification_confidence == 0.5 and is_uncertain(r)
+    assert r.classification_flags == [WEAK_WRITE_FLAG]
+    assert apl007_verdict(r) == [("review_required", Severity.LOW)]
+
+
+def test_search_docs_with_text_is_a_review_not_a_violation():
+    assert apl007_verdict(t("search_docs", "text", "limit")) == [("review_required", Severity.LOW)]
+
+
+def test_unknown_name_with_content_is_still_flagged_for_review():
+    r = t("stash_note", "title", "content")
+    assert r.capabilities == {C.UNKNOWN, C.WRITE}
+    assert r.classification_flags == [SCHEMA_ONLY_FLAG] and r.classification_confidence == 0.5
+    assert apl007_verdict(r) == [("review_required", Severity.LOW)]
+
+
+def test_weak_write_cannot_soften_a_strong_conflict():
+    r = t("get_status", "command", "content")
+    assert r.capabilities == {C.READ, C.EXECUTE} and r.classification_confidence == 0.6
+    assert apl007_verdict(r) == [("violation", Severity.HIGH)]
+
+
+@pytest.mark.parametrize("name", ["delete_repository", "run_pipeline", "fetch_page"])
+def test_weak_write_never_lowers_a_riskier_name(name):
+    assert t(name, "content").classification_confidence == t(name).classification_confidence
+    assert t(name, "content").capabilities == t(name).capabilities
+
+
+def test_weak_write_agrees_with_a_write_name():
+    r = t("save_note", "content")
+    assert r.capabilities == {C.WRITE}
+    assert r.classification_confidence == pytest.approx(0.8)
+
+
+def test_annotations_do_not_rescue_a_weak_write():
+    assert t("get_x", "text", readOnlyHint=True).classification_confidence == 0.5
