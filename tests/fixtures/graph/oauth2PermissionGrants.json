@@ -24,6 +24,14 @@
       "principalId": null,
       "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
       "scope": "Directory.ReadWrite.All"
+    },
+    {
+      "clientId": "c7c7c7c7-0000-4000-8000-000000000007",
+      "consentType": "AllPrincipals",
+      "id": "grant-well-managed",
+      "principalId": null,
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
+      "scope": "Calendars.Read"
     }
   ]
 }

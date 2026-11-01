@@ -421,6 +421,12 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   Skipped as weak or unverified: ASI02 Tool Misuse for APL-007 (full text not read), and ASI09
   Human-Agent Trust Exploitation for APL-010 (it is about humans being misled into approving,
   not about missing gates).
+  Added 2026-11-01, checked against the entry pages: `NHI1:2025 Improper Offboarding`, whose text
+  calls an NHI left active "without a new designated owner" orphaned and says to "ensure all NHIs
+  have assigned owners". Source:
+  https://owasp.org/www-project-non-human-identities-top-10/2025/1-improper-offboarding/ (served
+  from owasp.github.io). Only suggested mappings: the title is about offboarding, the fit to APL-004
+  is the owner text. ASI03 is not used for APL-004: an owner gap is not privilege abuse.
 - **R2 [HEURISTIC] — Graph naming verified.** Permissions follow
   `{resource}.{operation}.{constraint}`. `ReadWrite` grants "read, create, update, and delete".
   APL-001 maps operations to the capabilities they add over `Read`: Read/ReadBasic → read;
@@ -491,6 +497,35 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   violation. An uncertain tool whose widest set still fits the purpose gets no finding. Violation
   confidence = the tool's classifier confidence (0.7 from the name only, 0.9 with annotations).
   Severity: delete/execute high, write/network medium, read low.
+- **R13 [HEURISTIC] APL-004.** Owners are the union of application and service principal owners
+  (G6), evaluated per linked app. Zero owners is medium, high with a high-risk grant (R14).
+  `owner_ids` is `None` when not collected and `[]` when Graph listed none: an owners call answering
+  403 or 404 gives `None` unless the other object shows an owner, and the rule skips; other Graph
+  failures still stop the scan. With no application object (another tenant, or a managed identity)
+  only the service principal's owners are visible, so the finding is `review_required` at 0.6. That
+  softening is our call: **unverified** whether managed identities can have owners at all. A server
+  with no Entra link and no Entra-kind credential is out of scope, with no skip (R12). An owner who
+  has left the company still counts as an owner; Graph's list does not show that.
+- **R14 [HEURISTIC] High-risk permissions (`apl/highrisk.py`) — wording verified, choice is ours
+  (suggested mapping).** Checked 2026-11-01 against
+  https://learn.microsoft.com/en-us/graph/permissions-reference. Each link is that permission's
+  section. Microsoft does not publish such a list.
+
+  | Permission | Forms | Reference says |
+  |---|---|---|
+  | [`Application.ReadWrite.All`](https://learn.microsoft.com/en-us/graph/permissions-reference#applicationreadwriteall) | both | Allows "an application to act as other entities, and use the privileges they were granted" |
+  | [`AppRoleAssignment.ReadWrite.All`](https://learn.microsoft.com/en-us/graph/permissions-reference#approleassignmentreadwriteall) | both | Caution: can "grant additional privileges to itself, other applications, or any user" |
+  | [`RoleManagement.ReadWrite.Directory`](https://learn.microsoft.com/en-us/graph/permissions-reference#rolemanagementreadwritedirectory) | both | The same caution; covers adding members to Microsoft Entra roles |
+  | [`Directory.ReadWrite.All`](https://learn.microsoft.com/en-us/graph/permissions-reference#directoryreadwriteall) | both | Caution: "broad access to directory (Microsoft Entra ID) resources" |
+  | [`Sites.FullControl.All`](https://learn.microsoft.com/en-us/graph/permissions-reference#sitesfullcontrolall) | both | "Have full control of all site collections" |
+  | [`Mail.Send`](https://learn.microsoft.com/en-us/graph/permissions-reference#mailsend) | application | "Send mail as any user" |
+  | [`Mail.ReadWrite`](https://learn.microsoft.com/en-us/graph/permissions-reference#mailreadwrite) | application | "Read and write mail in all mailboxes" |
+  | [`Files.ReadWrite.All`](https://learn.microsoft.com/en-us/graph/permissions-reference#filesreadwriteall) | application | "read, create, update and delete all files in all site collections" |
+
+  The last three are application-only here because their delegated forms need no admin consent and
+  are limited to the signed-in user. Names match case-insensitively but exactly: `<resource>/<scope>`
+  from another API (G9) never matches. `User.ReadWrite.All` and `Group.ReadWrite.All` were left out
+  to keep the list small, not because they are safe.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:
@@ -555,7 +590,9 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   https://learn.microsoft.com/en-us/graph/api/resources/approleassignment?view=graph-rest-1.0
 - **G6 [SPEC] Owners — verified.** `GET /applications/{id}/owners` and
   `GET /servicePrincipals/{id}/owners`. We take the union of both, and keep ids only: without
-  user-read rights other fields come back null, and names are personal data. An app registered in
+  user-read rights other fields come back null, and names are personal data. `Application.Read.All`
+  is the least-privileged permission for both (rechecked 2026-11-01). The docs do not say what 403
+  or 404 means here; treating them as "not collected" is our reading (R13). An app registered in
   another tenant has only a service principal here.
   Sources: https://learn.microsoft.com/en-us/graph/api/application-list-owners?view=graph-rest-1.0 ,
   https://learn.microsoft.com/en-us/graph/api/serviceprincipal-list-owners?view=graph-rest-1.0
@@ -584,8 +621,9 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   no grants gets `[]` and is evaluated; an app not found stays `None` and is skipped with a
   warning. `kind_source: verified` is set only for `servicePrincipalType` `Application` or
   `ManagedIdentity`. Sign-in scopes (`openid`, `profile`, `email`, `offline_access`) have no mapping,
-  so they appear as skips. No owner, expired credentials and per-user grants are warnings, not
-  findings: no rule covers them yet.
+  so they appear as skips. Expired credentials and per-user grants are warnings, not findings: no
+  rule covers them yet. No owner became APL-004 (R13). `MCPServer.entra_apps` carries the linked
+  apps to rules; it is excluded from any inventory dump, so owner ids stay out of output.
 - **G11 [HEURISTIC] `scopemap.py` — permission names verified, choice of minimum is ours (suggested
   mapping).** Every name in the table was checked against the permissions reference, with
   delegated and application availability; `Files.Read` and `User.Read` have no application form, so

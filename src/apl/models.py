@@ -111,6 +111,40 @@ class Tool(BaseModel):
     annotation_flags: list[str] = Field(default_factory=list)
 
 
+class CredentialExpiry(BaseModel):
+    """Expiry metadata only. `secretText`, `hint` and `key` are deliberately not copied."""
+
+    kind: Literal["password", "key"]
+    key_id: str | None = None
+    end_date_time: datetime | None = None
+    pointer: str | None = None
+
+
+class EntraApp(BaseModel):
+    """One app as linked to a scan. Keyed by appId (client id), never by object id."""
+
+    app_id: str
+    display_name: str = ""
+    application_object_id: str | None = None  # None: registered in another tenant
+    service_principal_id: str | None = None  # None: no enterprise app, so nothing is granted
+    service_principal_type: str | None = None
+    credentials: list[CredentialExpiry] = Field(default_factory=list)
+    # ids only: names and UPNs are personal data. None = not collected; [] = Graph says no owners.
+    owner_ids: list[str] | None = None
+    delegated_all_principals: list[str] = Field(default_factory=list)  # admin consent, all users
+    delegated_per_user: list[str] = Field(default_factory=list)  # consent for specific users
+    application_permissions: list[str] = Field(default_factory=list)
+
+    def granted_scopes(self) -> list[str]:
+        return sorted(
+            {
+                *self.delegated_all_principals,
+                *self.delegated_per_user,
+                *self.application_permissions,
+            }
+        )
+
+
 class MCPServer(BaseModel):
     name: str
     transport: Transport = Transport.UNKNOWN
@@ -121,6 +155,8 @@ class MCPServer(BaseModel):
     credentials: list[CredentialRef] = Field(default_factory=list)
     tools: list[Tool] = Field(default_factory=list)
     tools_source: str = "none"  # none | fixture | live
+    # Entra apps linked to this server. Rule input only; never dumped (owner ids, key ids).
+    entra_apps: list[EntraApp] = Field(default_factory=list, exclude=True)
     # Tool names the client runs WITHOUT asking the user (Cline `autoApprove`, Roo `alwaysAllow`).
     # None = the config says nothing; [] = nothing auto-approved. ASSUMPTION R7.
     auto_approve: list[str] | None = None

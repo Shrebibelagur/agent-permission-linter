@@ -4,7 +4,19 @@ from __future__ import annotations
 
 import hashlib
 
-from apl.models import Capability, Evidence, Finding, MappingRef, RuleSkip, Severity, Tool
+from apl.models import (
+    Capability,
+    CredentialKind,
+    EntraApp,
+    Evidence,
+    Finding,
+    Inventory,
+    MappingRef,
+    MCPServer,
+    RuleSkip,
+    Severity,
+    Tool,
+)
 from apl.redact import redact
 
 MAX_SUBJECT = 200  # subjects can embed tool names, which are untrusted server output
@@ -25,9 +37,21 @@ ASI03 = MappingRef(
         "the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/"
     ),
 )
+NHI1 = MappingRef(
+    framework="OWASP Non-Human Identities Top 10 2025",
+    id="NHI1:2025",
+    title="Improper Offboarding",
+    url="https://owasp.org/www-project-non-human-identities-top-10/2025/1-improper-offboarding/",
+)
 
 # Tools at or below this classifier confidence cannot support a hard verdict.
 LOW_CONFIDENCE = 0.5
+ENTRA_ORIGIN = {"live": "graph.microsoft.com/v1.0", "mock": "entra-mock"}
+_ENTRA_KINDS = {
+    CredentialKind.OAUTH_APP,
+    CredentialKind.SERVICE_PRINCIPAL,
+    CredentialKind.MANAGED_IDENTITY,
+}
 
 
 def is_uncertain(tool: Tool) -> bool:
@@ -45,6 +69,35 @@ def kind_confidence(kind_source: str) -> tuple[float, str]:
     if kind_source == "inferred":
         return 0.75, "credential kind inferred from env var/header name"
     return 0.6, "credential kind unknown"
+
+
+def app_label(app: EntraApp) -> str:
+    """Display names are tenant-controlled and not unique, so the app id stays in the subject."""
+    return f"{_r(app.display_name)[:60]} ({app.app_id})" if app.display_name else app.app_id
+
+
+def entra_targets(
+    inv: Inventory, srv: MCPServer, rule_id: str, missing: str
+) -> tuple[list[EntraApp], list[RuleSkip]]:
+    """Apps to evaluate on this server, and a skip for each one that should be there but is not.
+
+    A server with no Entra link and no Entra-kind credential is out of scope: no skip (R12).
+    """
+    purposes = inv.agent.servers if inv.agent else []
+    ids = {c.entra_app_id.lower() for c in srv.credentials if c.entra_app_id}
+    ids |= {p.entra_app_id.lower() for p in purposes if p.server == srv.name and p.entra_app_id}
+    absent = ids - {a.app_id.lower() for a in srv.entra_apps}
+    skips = []
+    if not ids and any(c.kind in _ENTRA_KINDS for c in srv.credentials):
+        skips.append(skip(rule_id, srv.name, f"{missing} (no Entra app id for this server)"))
+    elif absent and inv.entra_source is None:
+        skips.append(skip(rule_id, srv.name, f"{missing} (run with --entra or --entra-mock)"))
+    else:
+        skips += [
+            skip(rule_id, f"{srv.name}/{i}", f"{missing} (app not found in Entra)")
+            for i in sorted(absent)
+        ]
+    return srv.entra_apps, skips
 
 
 def _r(s: str) -> str:

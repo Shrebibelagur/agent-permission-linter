@@ -40,6 +40,17 @@
           "isEnabled": true,
           "origin": "Application",
           "value": "Files.Read.All"
+        },
+        {
+          "allowedMemberTypes": [
+            "Application"
+          ],
+          "description": "Mail.Send",
+          "displayName": "Mail.Send",
+          "id": "b633e1c5-b582-4048-a93e-9f11b44c7e96",
+          "isEnabled": true,
+          "origin": "Application",
+          "value": "Mail.Send"
         }
       ],
       "keyCredentials": [],
@@ -89,6 +100,26 @@
       "id": "c5c5c5c5-0000-4000-8000-000000000005",
       "appId": "a5a5a5a5-0000-4000-8000-000000000005",
       "displayName": "unrelated",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c6c6c6c6-0000-4000-8000-000000000006",
+      "appId": "a6a6a6a6-0000-4000-8000-000000000006",
+      "displayName": "ownerless-mailer",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c7c7c7c7-0000-4000-8000-000000000007",
+      "appId": "a7a7a7a7-0000-4000-8000-000000000007",
+      "displayName": "well-managed",
       "accountEnabled": true,
       "servicePrincipalType": "Application",
       "appRoles": [],

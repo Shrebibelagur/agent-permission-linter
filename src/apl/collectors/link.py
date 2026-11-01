@@ -37,8 +37,6 @@ def _expired(app: EntraApp, now: datetime) -> int:
 def _warnings(srv: MCPServer, app: EntraApp, now: datetime) -> list[str]:
     who = f"{srv.name}: Entra app {app.display_name or app.app_id}"
     out = []
-    if not app.owner_ids:
-        out.append(f"{who} has no owner")
     expired = _expired(app, now)
     if expired:
         out.append(f"{who} has {expired} expired credential(s)")
@@ -101,6 +99,8 @@ def link_entra(inv: Inventory, snapshot: EntraSnapshot) -> None:
                 linked.append(cred)
                 continue
             linked.append(_link(cred, app, snapshot.source))
+            if app not in srv.entra_apps:
+                srv.entra_apps.append(app)
             notes.extend(_warnings(srv, app, now))
         srv.credentials = linked
     inv.warnings.extend(redact(n) for n in dict.fromkeys(notes))

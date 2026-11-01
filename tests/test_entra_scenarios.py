@@ -21,8 +21,9 @@ def report(fix):
     )
 
 
-def findings_for(report, server):
-    return [f for f in report.result.findings if f.subject.startswith(f"{server}/")]
+def findings_for(report, server, rule=None):
+    found = [f for f in report.result.findings if f.subject.startswith(f"{server}/")]
+    return [f for f in found if rule is None or f.rule_id == rule]
 
 
 def apl001_ran(report, server):
@@ -61,19 +62,31 @@ def test_correctly_scoped_calendar_app(report):
     assert not [s for s in report.result.skips if s.subject.startswith("calendar/")]
 
 
-def test_app_with_no_owner_is_reported_without_a_rule(report):
-    """No rule covers ownership yet, so it must surface as a warning, not vanish."""
-    warning = "files: Entra app orphan-files has no owner"
-    assert warning in report.inventory.warnings
-    assert findings_for(report, "files") == []  # its scope itself is fine
+def test_app_with_no_owner_is_a_finding_not_a_warning(report):
+    [f] = findings_for(report, "files")  # its scope itself is fine, so APL-001 adds nothing
+    assert f.rule_id == "APL-004" and f.severity is Severity.MEDIUM and f.status == "violation"
+    assert f.subject == "files/orphan-files (a3a3a3a3-0000-4000-8000-000000000003)"
+    assert f.evidence[0].source == "entra-mock"
     assert apl001_ran(report, "files")
-    assert warning in render(report, "md")
-    assert warning in json.loads(render(report, "json"))["limits"]["parser_warnings"]
+    assert not [w for w in report.inventory.warnings if "no owner" in w]
+    assert f.id in render(report, "md")
 
 
-def test_owned_apps_do_not_warn(report):
-    no_owner = [w for w in report.inventory.warnings if "no owner" in w]
-    assert no_owner == ["files: Entra app orphan-files has no owner"]
+def test_ownerless_app_with_a_high_risk_permission_is_high(report):
+    [f] = findings_for(report, "mailer", "APL-004")
+    assert f.severity is Severity.HIGH and f.granted == ["Mail.Send"]
+
+
+def test_only_ownerless_apps_are_flagged(report):
+    flagged = {f.subject.split("/")[0] for f in report.result.findings if f.rule_id == "APL-004"}
+    assert flagged == {"files", "mailer"}
+    ran = [e for e in report.result.evaluated if e.rule_id == "APL-004"]
+    assert len(ran) == 6
+
+
+def test_well_managed_app_has_no_findings(report):
+    assert findings_for(report, "managed") == []
+    assert apl001_ran(report, "managed")
 
 
 def test_unknown_scope_is_skipped_with_a_reason(report):
@@ -98,10 +111,10 @@ def test_mock_data_is_labelled_as_not_a_real_tenant(report):
 def test_every_format_renders_the_finding(report):
     assert "Mail.ReadWrite" in render(report, "md")
     data = json.loads(render(report, "json"))
-    assert data["summary"]["findings"] == 1 and data["summary"]["evaluated"] == 4
+    assert data["summary"]["findings"] == 3 and data["summary"]["evaluated"] == 12
     sarif = json.loads(render(report, "sarif"))
-    [result] = sarif["runs"][0]["results"]
-    assert result["ruleId"] == "APL-001" and result["level"] == "error"
+    [result] = [r for r in sarif["runs"][0]["results"] if r["ruleId"] == "APL-001"]
+    assert result["level"] == "error"
     location = result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
     assert location == "entra-mock"
 

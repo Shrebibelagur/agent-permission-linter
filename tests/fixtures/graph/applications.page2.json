@@ -27,6 +27,34 @@
       "signInAudience": "AzureADMyOrg",
       "keyCredentials": [],
       "passwordCredentials": []
+    },
+    {
+      "id": "b6b6b6b6-0000-4000-8000-000000000006",
+      "appId": "a6a6a6a6-0000-4000-8000-000000000006",
+      "displayName": "ownerless-mailer",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "b7b7b7b7-0000-4000-8000-000000000007",
+      "appId": "a7a7a7a7-0000-4000-8000-000000000007",
+      "displayName": "well-managed",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": [
+        {
+          "customKeyIdentifier": null,
+          "displayName": "ci",
+          "endDateTime": "2026-12-01T00:00:00Z",
+          "hint": "Fak",
+          "keyId": "f1f1f1f1-0000-4000-8000-000000000007",
+          "secretText": null,
+          "startDateTime": "2026-09-01T00:00:00Z"
+        }
+      ]
     }
   ]
 }

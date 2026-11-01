@@ -14,6 +14,8 @@ LINKED = {
     "a2a2a2a2-0000-4000-8000-000000000002": "calendar-reader",
     "a3a3a3a3-0000-4000-8000-000000000003": "orphan-files",
     "a4a4a4a4-0000-4000-8000-000000000004": "custom-scope",
+    "a6a6a6a6-0000-4000-8000-000000000006": "ownerless-mailer",
+    "a7a7a7a7-0000-4000-8000-000000000007": "well-managed",
 }
 
 
@@ -39,7 +41,7 @@ def test_fixtures_page_and_shape_like_graph(fix, no_network):
 
 def test_page_two_is_reached(fix):
     client = GraphClient(lambda: "mock", FixtureTransport(fix / "graph"))
-    assert len(client.get_all("/applications")) == 5
+    assert len(client.get_all("/applications")) == 7
 
 
 def test_mock_transport_goes_through_the_guard(fix):

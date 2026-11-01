@@ -21,6 +21,7 @@ from urllib.parse import quote
 import httpx
 from pydantic import BaseModel, Field, ValidationError
 
+from apl.models import CredentialExpiry, EntraApp
 from apl.redact import redact, remember_secret
 
 GRAPH_HOST = "graph.microsoft.com"
@@ -47,6 +48,10 @@ _FIXTURE_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
 
 class EntraError(RuntimeError):
     """A collector failure. Messages hold status codes and paths, never bodies or credentials."""
+
+
+class GraphUnreadable(EntraError):
+    """Graph answered 403 or 404: this one object cannot be read."""
 
 
 class ReadOnlyViolation(EntraError):
@@ -212,7 +217,8 @@ class GraphClient:
                 return _page(resp, path)
             if status != 429 and status < 500:
                 hint = ": needs Application.Read.All, Directory.Read.All" if status == 403 else ""
-                raise EntraError(f"Graph HTTP {status} for {path}{hint}")
+                failure = GraphUnreadable if status in (403, 404) else EntraError
+                raise failure(f"Graph HTTP {status} for {path}{hint}")
             delay = _retry_delay(resp, attempt)
             if delay > MAX_RETRY_AFTER:
                 raise EntraError(f"Graph HTTP {status} for {path}: wait {delay:.0f}s too long")
@@ -249,38 +255,6 @@ def _page(resp: httpx.Response, path: str) -> dict[str, Any]:
     if not isinstance(page, dict):
         raise EntraError(f"Graph response for {path} is not an object")
     return page
-
-
-class CredentialExpiry(BaseModel):
-    """Expiry metadata only. `secretText`, `hint` and `key` are deliberately not copied."""
-
-    kind: Literal["password", "key"]
-    key_id: str | None = None
-    end_date_time: datetime | None = None
-
-
-class EntraApp(BaseModel):
-    """One app as linked to a scan. Keyed by appId (client id), never by object id."""
-
-    app_id: str
-    display_name: str = ""
-    application_object_id: str | None = None  # None: registered in another tenant
-    service_principal_id: str | None = None  # None: no enterprise app, so nothing is granted
-    service_principal_type: str | None = None
-    credentials: list[CredentialExpiry] = Field(default_factory=list)
-    owner_ids: list[str] = Field(default_factory=list)  # ids only: names and UPNs are personal data
-    delegated_all_principals: list[str] = Field(default_factory=list)  # admin consent, all users
-    delegated_per_user: list[str] = Field(default_factory=list)  # consent for specific users
-    application_permissions: list[str] = Field(default_factory=list)
-
-    def granted_scopes(self) -> list[str]:
-        return sorted(
-            {
-                *self.delegated_all_principals,
-                *self.delegated_per_user,
-                *self.application_permissions,
-            }
-        )
 
 
 class EntraSnapshot(BaseModel):
@@ -332,9 +306,16 @@ def _app_role_name(assignment: dict[str, Any], sps: dict[str, dict[str, Any]]) -
     return _qualified(resource, resource_id, _text(value) or f"unresolved-app-role-{role_id}")
 
 
-def _owners(client: GraphClient, *paths: str) -> list[str]:
-    ids = {str(o["id"]) for p in paths for o in client.get_all(p) if o.get("id")}
-    return sorted(_text(i) for i in ids)
+def _owners(client: GraphClient, *paths: str) -> list[str] | None:
+    """Union across objects. None if one was unreadable and the rest show no owner: unknown."""
+    ids: set[str] = set()
+    unreadable = False
+    for path in paths:
+        try:
+            ids.update(str(o["id"]) for o in client.get_all(path) if o.get("id"))
+        except GraphUnreadable:
+            unreadable = True
+    return None if unreadable and not ids else sorted(_text(i) for i in ids)
 
 
 def _add_delegated(

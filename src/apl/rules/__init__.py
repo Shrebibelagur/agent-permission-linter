@@ -6,6 +6,7 @@ from apl.models import Inventory, RuleResult
 from apl.rules import (
     apl001_overscoped,
     apl002_shared_credential,
+    apl004_no_owner,
     apl007_exceeds_purpose,
     apl010_no_approval_gate,
 )
@@ -13,6 +14,7 @@ from apl.rules import (
 RULES = [
     apl001_overscoped,
     apl002_shared_credential,
+    apl004_no_owner,
     apl007_exceeds_purpose,
     apl010_no_approval_gate,
 ]

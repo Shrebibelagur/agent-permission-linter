@@ -35,5 +35,22 @@
         "name": "list_messages"
       }
     ]
+  },
+  "mailer": {
+    "tools": [
+      {
+        "name": "send_mail"
+      }
+    ]
+  },
+  "managed": {
+    "tools": [
+      {
+        "name": "list_events"
+      },
+      {
+        "name": "get_event"
+      }
+    ]
   }
 }

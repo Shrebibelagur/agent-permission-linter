@@ -23,6 +23,18 @@
       "env": {
         "AZURE_CLIENT_ID": "a4a4a4a4-0000-4000-8000-000000000004"
       }
+    },
+    "mailer": {
+      "command": "mailer-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a6a6a6a6-0000-4000-8000-000000000006"
+      }
+    },
+    "managed": {
+      "command": "managed-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a7a7a7a7-0000-4000-8000-000000000007"
+      }
     }
   }
 }
