@@ -87,8 +87,7 @@ def test_inventory_fields_are_pseudonyms(world):
     assert_clean(stdout=r.stdout, stderr=r.stderr)
     local, remote = data["servers"]
     assert local["command"] == pseudonym("command-name", COMMAND)
-    assert local["args"][0] == pseudonym("arg-name", ARG)
-    assert local["args"][1] == pseudonym("arg-name", "-y")
+    assert local["args"] == ["[arg-1]", "[arg-2]", "[arg-3]", REDACTED]
     assert remote["url"] == pseudonym("url-name", URL)
     assert data["agent"]["name"] == pseudonym("agent-name", AGENT)
 
@@ -102,10 +101,40 @@ def test_inventory_prints_them_without_the_flag(world):
 def test_redacted_args_stay_visible_and_are_never_hashed(world):
     r, data = inventory(world, "--anonymise-names")
     assert REDACTED in data["servers"][0]["args"]
-    assert pseudonym("arg-name", SECRET) not in r.stdout
+    assert_clean(stdout=r.stdout)
 
 
-def test_same_value_same_pseudonym_across_runs(world):
+def test_flag_value_form_of_a_redacted_arg_stays_whole(tmp_path):
+    config = tmp_path / "mcp.json"
+    server = {"command": "c", "args": ["--mode=fast", f"--token={SECRET}", "--region=eu"]}
+    config.write_text(json.dumps({"mcpServers": {"s": server}}), encoding="utf-8")
+    r = run("inventory", "-c", config, "--anonymise-names")
+    args = json.loads(r.stdout)["servers"][0]["args"]
+    assert args == ["[arg-1]", f"--token={REDACTED}", "[arg-2]"]
+
+
+def test_placeholders_number_per_server_and_do_not_link_values(tmp_path):
+    """The same value on two servers must not be recognisable, and an unknown secret leaves
+    nothing derived from it in the output."""
+    config = tmp_path / "mcp.json"
+    servers = {
+        "a": {"command": "c", "args": ["shared-unrecognised-value"]},
+        "b": {"command": "c", "args": ["other", "shared-unrecognised-value"]},
+    }
+    config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
+    r = run("inventory", "-c", config, "--anonymise-names")
+    a, b = json.loads(r.stdout)["servers"]
+    assert a["args"] == ["[arg-1]"] and b["args"] == ["[arg-1]", "[arg-2]"]
+    assert "shared-unrecognised-value" not in r.stdout
+
+
+def test_no_args_is_fine(tmp_path):
+    config = tmp_path / "mcp.json"
+    config.write_text(json.dumps({"mcpServers": {"s": {"command": "c"}}}), encoding="utf-8")
+    assert json.loads(run("inventory", "-c", config, "--anonymise-names").stdout)["servers"]
+
+
+def test_same_input_same_output_across_runs(world):
     first, second = inventory(world, "--anonymise-names"), inventory(world, "--anonymise-names")
     assert first[1]["servers"] == second[1]["servers"]
 

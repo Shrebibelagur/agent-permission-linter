@@ -66,10 +66,19 @@ def anonymised(inv: Inventory) -> Inventory:
     return copy
 
 
-def _pseudonymous_arg(arg: str) -> str:
-    """A redacted arg is left alone: it holds no secret, and says one was removed. Hashing one
-    that still held a value would break the rule that secrets are never hashed."""
-    return arg if REDACTED in arg else idmask.pseudonym("arg-name", arg)
+def _placeholder_args(args: list[str]) -> list[str]:
+    """`[arg-1]`, `[arg-2]`, per server. A placeholder, not a pseudonym: an arg we did not
+    recognise as a secret may still be one, and secrets are never hashed. A redacted arg stays
+    as it is: it holds no value, and says one was removed."""
+    out: list[str] = []
+    count = 0
+    for arg in args:
+        if REDACTED in arg:
+            out.append(arg)
+        else:
+            count += 1
+            out.append(f"[arg-{count}]")
+    return out
 
 
 def inventory_data(inv: Inventory) -> dict:
@@ -85,7 +94,7 @@ def inventory_data(inv: Inventory) -> dict:
             srv["command"] = idmask.pseudonym("command-name", srv["command"])
         if "url" in srv:
             srv["url"] = idmask.pseudonym("url-name", srv["url"])
-        srv["args"] = [_pseudonymous_arg(a) for a in srv.get("args", [])]
+        srv["args"] = _placeholder_args(srv.get("args", []))
     return idmask.mask_names_obj(data)
 
 
