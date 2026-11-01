@@ -52,7 +52,7 @@ def test_over_scoped_mail_app(report):
 def test_mail_triage_demo_finding_is_pinned(report):
     """The README demo: exact id, severity, confidence and wording."""
     [f] = findings_for(report, "mail", "APL-001")
-    assert f.id == "APL-001:d02e76c2cf43"
+    assert f.id == "APL-001:cbd71fa9e09a"
     assert (f.severity, f.confidence) == (Severity.HIGH, 0.9)
     assert f.confidence_reason == "credential kind verified"
     assert f.fix == (

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 
 from apl.models import (
+    AppRef,
     Capability,
     CredentialKind,
     EntraApp,
@@ -89,6 +90,10 @@ def app_label(app: EntraApp) -> str:
     return f"{_r(app.display_name)[:60]} ({masked})" if app.display_name else masked
 
 
+def app_ref(app: EntraApp) -> AppRef:
+    return AppRef(app_id=app.app_id, display_name=app.display_name)
+
+
 def entra_targets(
     inv: Inventory, srv: MCPServer, rule_id: str, missing: str
 ) -> tuple[list[EntraApp], list[RuleSkip]]:
@@ -141,7 +146,11 @@ def make_finding(
     status: str = "violation",
 ) -> Finding:
     subj = _r(subject)[:MAX_SUBJECT]
-    digest = hashlib.sha256(f"{rule_id}|{subj}".encode()).hexdigest()[:12]
+    identity = f"{rule_id}|{subj}"
+    linked = next((e.app for e in evidence or [] if e.app), None)
+    if linked:  # two apps can sit behind one server and variable name (ASSUMPTIONS R17)
+        identity += f"|{linked.app_id.lower()}"
+    digest = hashlib.sha256(identity.encode()).hexdigest()[:12]
     return Finding(
         id=f"{rule_id}:{digest}",
         rule_id=rule_id,

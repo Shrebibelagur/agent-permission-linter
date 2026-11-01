@@ -6,7 +6,7 @@ Matches on appId (client id). ASSUMPTION G10.
 from __future__ import annotations
 
 from apl.collectors.entra import EntraApp, EntraSnapshot
-from apl.models import CredentialKind, CredentialRef, Evidence, Inventory, MCPServer
+from apl.models import AppRef, CredentialKind, CredentialRef, Evidence, Inventory, MCPServer
 from apl.redact import redact
 
 # servicePrincipalType values that settle the credential kind. Others leave it as it was.
@@ -49,7 +49,12 @@ def _link(cred: CredentialRef, app: EntraApp, source: str) -> CredentialRef:
     )
     update: dict = {
         "granted_scopes": app.granted_scopes(),
-        "evidence": Evidence(source=origin, pointer=f"/{resource}/{object_id}", note=redact(note)),
+        "evidence": Evidence(
+            source=origin,
+            pointer=f"/{resource}/{object_id}",
+            note=redact(note),
+            app=AppRef(app_id=app.app_id, display_name=app.display_name),
+        ),
     }
     kind = _VERIFIED_KINDS.get(app.service_principal_type or "")
     if kind is not None:

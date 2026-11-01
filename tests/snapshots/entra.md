@@ -22,19 +22,19 @@ Checks: 33 evaluated, 17 not evaluated; see [Not evaluated](#not-evaluated).
 
 | ID | Severity | Status | Confidence | Tool / server | Title |
 |---|---|---|---:|---|---|
-| `APL-001:d02e76c2cf43` | high | violation | 0.90 | `mail/AZURE_CLIENT_ID` | Granted scope broader than any tool needs |
-| `APL-004:a31c382d732b` | high | violation | 0.95 | `mailer/ownerless-mailer (a6a6...0006)` | Entra app linked to this server has no owner |
-| `APL-006:f403158a17dd` | high | violation | 0.95 | `mailer/Mail.Send` | High-risk permission granted with no justification |
-| `APL-004:48a064935433` | medium | violation | 0.95 | `files/orphan-files (a3a3...0003)` | Entra app linked to this server has no owner |
-| `APL-005:c6364be60519` | medium | violation | 0.95 | `expired/expired-secret (a8a8...0008)/password-f1f1...0008` | Expired credential still present |
-| `APL-005:746ac19591f4` | medium | violation | 0.80 | `longlived/long-lived-secret (a9a9...0009)/password-f1f1...0009` | Credential has no expiry |
-| `APL-005:29d167927a5a` | medium | violation | 0.95 | `mail/mail-triage (a1a1...0001)/password-f1f1...0001` | Expired credential still present |
-| `APL-005:04f28e9d629b` | low | violation | 0.95 | `calendar/calendar-reader (a2a2...0002)/password-f1f1...0002` | Credential lifetime over 180 days |
-| `APL-005:94181ced390f` | low | violation | 0.95 | `longlived/long-lived-secret (a9a9...0009)/key-f2f2...0009` | Credential lifetime over 180 days |
+| `APL-001:cbd71fa9e09a` | high | violation | 0.90 | `mail/AZURE_CLIENT_ID` | Granted scope broader than any tool needs |
+| `APL-004:c2469ff24bd9` | high | violation | 0.95 | `mailer/ownerless-mailer (a6a6...0006)` | Entra app linked to this server has no owner |
+| `APL-006:3d029284dc2d` | high | violation | 0.95 | `mailer/Mail.Send` | High-risk permission granted with no justification |
+| `APL-004:9be1112326cf` | medium | violation | 0.95 | `files/orphan-files (a3a3...0003)` | Entra app linked to this server has no owner |
+| `APL-005:57d6ef5d6655` | medium | violation | 0.95 | `expired/expired-secret (a8a8...0008)/password-f1f1...0008` | Expired credential still present |
+| `APL-005:bf124da750ac` | medium | violation | 0.80 | `longlived/long-lived-secret (a9a9...0009)/password-f1f1...0009` | Credential has no expiry |
+| `APL-005:d4e28b0c93d9` | medium | violation | 0.95 | `mail/mail-triage (a1a1...0001)/password-f1f1...0001` | Expired credential still present |
+| `APL-005:09f0b4a955ff` | low | violation | 0.95 | `calendar/calendar-reader (a2a2...0002)/password-f1f1...0002` | Credential lifetime over 180 days |
+| `APL-005:896a0f154400` | low | violation | 0.95 | `longlived/long-lived-secret (a9a9...0009)/key-f2f2...0009` | Credential lifetime over 180 days |
 
 ## Fixes
 
-### APL-001:d02e76c2cf43: mail/AZURE_CLIENT_ID
+### APL-001:cbd71fa9e09a: mail/AZURE_CLIENT_ID
 
 Remove or narrow Mail.ReadWrite: no tool on 'mail' needs delete/write. Grant the least-privileged permission instead (suggested mapping): Mail.Read.
 
@@ -44,7 +44,7 @@ Remove or narrow Mail.ReadWrite: no tool on 'mail' needs delete/write. Grant the
 - Suggested mapping: [LLM06:2025 Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
 - Suggested mapping: [ASI03 Identity &amp; Privilege Abuse](https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/)
 
-### APL-004:a31c382d732b: mailer/ownerless-mailer (a6a6...0006)
+### APL-004:c2469ff24bd9: mailer/ownerless-mailer (a6a6...0006)
 
 Assign an owner to 'ownerless-mailer' in Entra, or remove the app from 'mailer' if nobody is responsible for it.
 
@@ -54,7 +54,7 @@ Assign an owner to 'ownerless-mailer' in Entra, or remove the app from 'mailer' 
 - Evidence: `entra-mock` `/servicePrincipals/c6c6...0006/owners`: Graph returned no owners
 - Suggested mapping: [NHI1:2025 Improper Offboarding](https://owasp.org/www-project-non-human-identities-top-10/2025/1-improper-offboarding/)
 
-### APL-006:f403158a17dd: mailer/Mail.Send
+### APL-006:3d029284dc2d: mailer/Mail.Send
 
 Remove Mail.Send from 'ownerless-mailer' if the agent does not need it, or add 'Mail.Send: &lt;reason>' under justifications in agent.yaml.
 
@@ -64,7 +64,7 @@ Remove Mail.Send from 'ownerless-mailer' if the agent does not need it, or add '
 - Suggested mapping: [NHI5:2025 Overprivileged NHI](https://owasp.org/www-project-non-human-identities-top-10/2025/5-overprivileged-nhi/)
 - Suggested mapping: [ASI03 Identity &amp; Privilege Abuse](https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/)
 
-### APL-004:48a064935433: files/orphan-files (a3a3...0003)
+### APL-004:9be1112326cf: files/orphan-files (a3a3...0003)
 
 Assign an owner to 'orphan-files' in Entra, or remove the app from 'files' if nobody is responsible for it.
 
@@ -74,7 +74,7 @@ Assign an owner to 'orphan-files' in Entra, or remove the app from 'files' if no
 - Evidence: `entra-mock` `/servicePrincipals/c3c3...0003/owners`: Graph returned no owners
 - Suggested mapping: [NHI1:2025 Improper Offboarding](https://owasp.org/www-project-non-human-identities-top-10/2025/1-improper-offboarding/)
 
-### APL-005:c6364be60519: expired/expired-secret (a8a8...0008)/password-f1f1...0008
+### APL-005:57d6ef5d6655: expired/expired-secret (a8a8...0008)/password-f1f1...0008
 
 Rotate this password credential on 'expired-secret' to one lasting at most 180 days and remove the old one, or use a managed identity.
 
@@ -83,7 +83,7 @@ Rotate this password credential on 'expired-secret' to one lasting at most 180 d
 - Evidence: `entra-mock` `/applications/b8b8...0008/passwordCredentials`: expired 2025-09-01
 - Suggested mapping: [NHI7:2025 Long-Lived Secrets](https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/)
 
-### APL-005:746ac19591f4: longlived/long-lived-secret (a9a9...0009)/password-f1f1...0009
+### APL-005:bf124da750ac: longlived/long-lived-secret (a9a9...0009)/password-f1f1...0009
 
 Rotate this password credential on 'long-lived-secret' to one lasting at most 180 days and remove the old one, or use a managed identity.
 
@@ -92,7 +92,7 @@ Rotate this password credential on 'long-lived-secret' to one lasting at most 18
 - Evidence: `entra-mock` `/applications/b9b9...0009/passwordCredentials`: no endDateTime
 - Suggested mapping: [NHI7:2025 Long-Lived Secrets](https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/)
 
-### APL-005:29d167927a5a: mail/mail-triage (a1a1...0001)/password-f1f1...0001
+### APL-005:d4e28b0c93d9: mail/mail-triage (a1a1...0001)/password-f1f1...0001
 
 Rotate this password credential on 'mail-triage' to one lasting at most 180 days and remove the old one, or use a managed identity.
 
@@ -101,7 +101,7 @@ Rotate this password credential on 'mail-triage' to one lasting at most 180 days
 - Evidence: `entra-mock` `/applications/b1b1...0001/passwordCredentials`: expired 2025-01-01
 - Suggested mapping: [NHI7:2025 Long-Lived Secrets](https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/)
 
-### APL-005:04f28e9d629b: calendar/calendar-reader (a2a2...0002)/password-f1f1...0002
+### APL-005:09f0b4a955ff: calendar/calendar-reader (a2a2...0002)/password-f1f1...0002
 
 Rotate this password credential on 'calendar-reader' to one lasting at most 180 days and remove the old one, or use a managed identity.
 
@@ -110,7 +110,7 @@ Rotate this password credential on 'calendar-reader' to one lasting at most 180 
 - Evidence: `entra-mock` `/applications/b2b2...0002/passwordCredentials`: 2557 days, 2024-01-01 to 2031-01-01
 - Suggested mapping: [NHI7:2025 Long-Lived Secrets](https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/)
 
-### APL-005:94181ced390f: longlived/long-lived-secret (a9a9...0009)/key-f2f2...0009
+### APL-005:896a0f154400: longlived/long-lived-secret (a9a9...0009)/key-f2f2...0009
 
 Rotate this key credential on 'long-lived-secret' to one lasting at most 180 days and remove the old one, or use a managed identity.
 

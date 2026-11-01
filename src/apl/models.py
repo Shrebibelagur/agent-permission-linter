@@ -56,12 +56,20 @@ class Severity(StrEnum):
     CRITICAL = "critical"
 
 
+class AppRef(BaseModel):
+    """The Entra app a fact is about. Finding input only: the full id is never printed."""
+
+    app_id: str
+    display_name: str = ""
+
+
 class Evidence(BaseModel):
     """Where a fact came from. `source` is a file path or API endpoint; never a secret."""
 
     source: str
     pointer: str | None = None  # JSON pointer / key path
     note: str | None = None
+    app: AppRef | None = Field(default=None, exclude=True)
 
 
 class CredentialRef(BaseModel):

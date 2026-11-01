@@ -15,7 +15,15 @@ from datetime import UTC, datetime, timedelta
 
 from apl.models import CredentialExpiry, EntraApp, Evidence, Inventory, RuleResult, Severity
 from apl.redact import mask_id
-from apl.rules.base import ENTRA_ORIGIN, NHI7, app_label, entra_targets, make_finding, skip
+from apl.rules.base import (
+    ENTRA_ORIGIN,
+    NHI7,
+    app_label,
+    app_ref,
+    entra_targets,
+    make_finding,
+    skip,
+)
 
 RULE_ID = "APL-005"
 MAX_LIFETIME = timedelta(days=180)
@@ -76,7 +84,7 @@ def _check_credential(
             subject,
             granted=[f"{c.kind} credential: {note}"],
             required=[f"expiry within {MAX_LIFETIME.days} days, rotated before it ends"],
-            evidence=[Evidence(source=origin, pointer=c.pointer, note=note)],
+            evidence=[Evidence(source=origin, pointer=c.pointer, note=note, app=app_ref(app))],
             fix=(
                 f"Rotate this {c.kind} credential on '{app.display_name or app.app_id}' to one "
                 f"lasting at most {MAX_LIFETIME.days} days and remove the old one, or use a "

@@ -558,6 +558,13 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   rule is skipped, as justifications could not exist. An unresolved app role (G5) might be high-risk,
   so it is skipped by name, not passed. G10 applies: delegated grants count though a given token may
   not carry them. `required_graph_permissions` in agent.yaml is not a justification.
+- **R17 [HEURISTIC] Finding ids — changed 2026-11-01.** An id is the first 12 hex characters of
+  SHA-256 over rule id, subject and, when the evidence names a linked Entra app, its lower-case
+  appId. Two apps behind one server and variable name no longer share an id. **Every finding about
+  a linked app gets a new id once**, so baselines, suppressions and SARIF
+  `partialFingerprints` for APL-001, APL-004, APL-005 and APL-006 will see old ids vanish and new ones
+  appear. Findings with no linked app (APL-002 on a config secret, APL-007, APL-010) keep theirs.
+  The app id is hashed, not printed: `Evidence.app` is excluded from every dump.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:

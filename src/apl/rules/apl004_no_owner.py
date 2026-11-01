@@ -10,7 +10,15 @@ from __future__ import annotations
 
 from apl.highrisk import high_risk_grants
 from apl.models import EntraApp, Evidence, Finding, Inventory, RuleResult, Severity
-from apl.rules.base import ENTRA_ORIGIN, NHI1, app_label, entra_targets, make_finding, skip
+from apl.rules.base import (
+    ENTRA_ORIGIN,
+    NHI1,
+    app_label,
+    app_ref,
+    entra_targets,
+    make_finding,
+    skip,
+)
 
 RULE_ID = "APL-004"
 
@@ -21,7 +29,8 @@ def _evidence(app: EntraApp, origin: str) -> list[Evidence]:
         objects.append(f"/applications/{app.application_object_id}/owners")
     if app.service_principal_id:
         objects.append(f"/servicePrincipals/{app.service_principal_id}/owners")
-    return [Evidence(source=origin, pointer=p, note="Graph returned no owners") for p in objects]
+    note = "Graph returned no owners"
+    return [Evidence(source=origin, pointer=p, note=note, app=app_ref(app)) for p in objects]
 
 
 def _finding(server: str, app: EntraApp, origin: str) -> Finding:

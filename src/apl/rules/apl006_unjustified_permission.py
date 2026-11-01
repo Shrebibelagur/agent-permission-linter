@@ -13,7 +13,16 @@ from __future__ import annotations
 
 from apl.highrisk import HighRisk, high_risk_grants
 from apl.models import EntraApp, Evidence, Finding, Inventory, RuleResult, Severity
-from apl.rules.base import ASI03, ENTRA_ORIGIN, NHI5, app_label, entra_targets, make_finding, skip
+from apl.rules.base import (
+    ASI03,
+    ENTRA_ORIGIN,
+    NHI5,
+    app_label,
+    app_ref,
+    entra_targets,
+    make_finding,
+    skip,
+)
 
 RULE_ID = "APL-006"
 _UNRESOLVED = ("unresolved-app-role-", "unknown-resource-")
@@ -46,6 +55,7 @@ def _finding(server: str, app: EntraApp, entry: HighRisk, origin: str) -> Findin
                 source=origin,
                 pointer=pointer,
                 note=f"{app_label(app)}: {entry.why}. Reference: {entry.source}",
+                app=app_ref(app),
             )
         ],
         fix=(
