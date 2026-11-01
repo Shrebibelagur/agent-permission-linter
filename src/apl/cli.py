@@ -10,9 +10,10 @@ from typing import Annotated
 import typer
 
 from apl.collectors.entra import ENV_VARS, EntraError, collect_live, collect_mock
+from apl.idmask import SaltError
 from apl.inventory import build_inventory
 from apl.parsers.mcp_config import ConfigParseError
-from apl.redact import mask_ids, redact
+from apl.redact import scrub
 
 # show_locals stays off: a crash must never print a local holding a credential.
 app = typer.Typer(
@@ -125,11 +126,11 @@ def scan(
         collector = partial(collect_mock, entra_mock)
     try:
         report = run_scan(config, agent, tools, entra=collector)
-    except (ConfigParseError, EntraError) as e:
-        typer.secho(f"error: {mask_ids(redact(str(e)))}", fg="red", err=True)
+    except (ConfigParseError, EntraError, SaltError) as e:
+        typer.secho(f"error: {scrub(str(e))}", fg="red", err=True)
         raise typer.Exit(2) from None
     for w in report.inventory.warnings:
-        typer.secho(f"warning: {mask_ids(redact(w))}", fg="yellow", err=True)
+        typer.secho(f"warning: {scrub(w)}", fg="yellow", err=True)
     text = render(report, fmt)
     if out is None:
         typer.echo(text)

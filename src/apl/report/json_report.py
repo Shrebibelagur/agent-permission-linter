@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 
 from apl import __version__
-from apl.redact import mask_ids, redact_obj
+from apl.redact import redact_obj, scrub
 from apl.report.common import collect_limits, display_path, summary_counts
 from apl.scan import ScanReport
 
@@ -59,4 +59,4 @@ def build_json(report: ScanReport) -> dict:
 
 def render_json(report: ScanReport) -> str:
     text = json.dumps(redact_obj(build_json(report)), indent=2, ensure_ascii=False)
-    return mask_ids(text) + "\n"
+    return scrub(text) + "\n"

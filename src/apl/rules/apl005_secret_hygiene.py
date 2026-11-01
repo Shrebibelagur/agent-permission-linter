@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from apl import idmask
 from apl.models import CredentialExpiry, EntraApp, Evidence, Inventory, RuleResult, Severity
-from apl.redact import mask_id
 from apl.rules.base import (
     ENTRA_ORIGIN,
     NHI7,
@@ -62,7 +62,7 @@ def _check_credential(
     now: datetime,
     origin: str,
 ) -> None:
-    key = mask_id(c.key_id) if c.key_id else index
+    key = idmask.show("cred", c.key_id) if c.key_id else index
     detail = f"{c.kind}-{key}"
     subject = app_subject(server, app, detail)
     if c.end_unreadable:

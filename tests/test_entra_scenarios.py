@@ -9,10 +9,12 @@ from typer.testing import CliRunner
 
 from apl.cli import app
 from apl.collectors.entra import collect_mock
+from apl.idmask import pseudonym
 from apl.models import Severity
 from apl.report import render
 from apl.scan import run_scan
 
+FILES_APP = "a3a3a3a3-0000-4000-8000-000000000003"
 NOW = datetime(2026, 11, 1, tzinfo=UTC)  # fixture dates are judged against this, not today
 
 
@@ -52,7 +54,7 @@ def test_over_scoped_mail_app(report):
 def test_mail_triage_demo_finding_is_pinned(report):
     """The README demo: exact id, severity, confidence and wording."""
     [f] = findings_for(report, "mail", "APL-001")
-    assert f.id == "APL-001:e8620271c261"
+    assert f.id == "APL-001:023e23f35826"
     assert (f.severity, f.confidence) == (Severity.HIGH, 0.9)
     assert f.confidence_reason == "credential kind verified"
     assert f.fix == (
@@ -71,7 +73,7 @@ def test_correctly_scoped_calendar_app(report):
 def test_app_with_no_owner_is_a_finding_not_a_warning(report):
     [f] = findings_for(report, "files")  # its scope itself is fine, so APL-001 adds nothing
     assert f.rule_id == "APL-004" and f.severity is Severity.MEDIUM and f.status == "violation"
-    assert f.subject == "files / orphan-files (a3a3...0003)"
+    assert f.subject == f"files / orphan-files ({pseudonym('app', FILES_APP)})"
     assert f.evidence[0].source == "entra-mock"
     assert apl001_ran(report, "files")
     assert not [w for w in report.inventory.warnings if "no owner" in w]

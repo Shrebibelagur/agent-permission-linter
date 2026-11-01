@@ -6,6 +6,7 @@ from builders import cred, inventory, server
 from apl.collectors.entra import GraphClient, collect_entra
 from apl.collectors.link import link_entra
 from apl.highrisk import REFERENCE, high_risk_grants, lookup
+from apl.idmask import pseudonym
 from apl.models import AgentSpec, CredentialKind, EntraApp, ServerPurpose, Severity
 from apl.rules.apl004_no_owner import check
 
@@ -37,7 +38,7 @@ def test_positive_ownerless_app_is_medium():
     (f,) = check(linked(app())).findings
     assert f.rule_id == "APL-004" and f.status == "violation"
     assert f.severity is Severity.MEDIUM
-    assert f.subject == "mail / agent (a1a1...0001)"
+    assert f.subject == f"mail / agent ({pseudonym('app', APP_ID)})"
     assert f.confidence == 0.95 and "read directly" in f.confidence_reason
     assert [e.pointer for e in f.evidence] == [
         "/applications/obj1/owners",
@@ -78,7 +79,7 @@ def test_service_principal_only_app_is_a_review():
 def test_negative_owned_app():
     res = check(linked(app(owner_ids=["u1"])))
     assert res.findings == [] and res.skips == []
-    assert [e.subject for e in res.evaluated] == ["mail / agent (a1a1...0001)"]
+    assert [e.subject for e in res.evaluated] == [f"mail / agent ({pseudonym('app', APP_ID)})"]
 
 
 def test_skip_owner_data_not_collected():
@@ -109,7 +110,7 @@ def test_skip_app_not_found_in_entra():
     inv = inventory(server("mail", creds=[c]))
     inv.entra_source = "mock"
     (s,) = check(inv).skips
-    assert s.subject == "mail / (missing)"
+    assert s.subject == f"mail / ({pseudonym('app', 'missing')})"
     assert s.reason == "not evaluated: missing owner data (app not found in Entra)"
 
 

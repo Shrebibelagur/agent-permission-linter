@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 
+from apl import idmask
 from apl.models import (
     AppRef,
     Capability,
@@ -18,7 +19,7 @@ from apl.models import (
     Severity,
     Tool,
 )
-from apl.redact import mask_id, redact
+from apl.redact import redact
 
 MAX_SUBJECT = 200  # subjects can embed tool names, which are untrusted server output
 
@@ -86,7 +87,7 @@ def kind_confidence(kind_source: str) -> tuple[float, str]:
 
 def app_label(app: EntraApp | AppRef) -> str:
     """Display names are tenant-controlled and not unique, so the app id stays in the subject."""
-    masked = f"({mask_id(app.app_id.lower())})"
+    masked = f"({idmask.show('app', app.app_id)})"
     return f"{_r(app.display_name)[:60]} {masked}" if app.display_name else masked
 
 
@@ -118,7 +119,11 @@ def entra_targets(
         skips.append(skip(rule_id, srv.name, f"{missing} (run with --entra or --entra-mock)"))
     else:
         skips += [
-            skip(rule_id, f"{srv.name} / ({mask_id(i)})", f"{missing} (app not found in Entra)")
+            skip(
+                rule_id,
+                f"{srv.name} / ({idmask.show('app', i)})",
+                f"{missing} (app not found in Entra)",
+            )
             for i in sorted(absent)
         ]
     return srv.entra_apps, skips
@@ -156,9 +161,10 @@ def make_finding(
         server, _, detail = subject.partition("/")
         subject = app_subject(server, linked, detail.replace("/", " / "))
     subj = _r(subject)[:MAX_SUBJECT]
-    identity = f"{rule_id}|{subj}"
+    # Pseudonymised in every mode, so --show-ids does not change a finding's id (R19).
+    identity = f"{rule_id}|{idmask.pseudonymise(_r(subject))[:MAX_SUBJECT]}"
     if linked:  # two apps can sit behind one server and variable name (ASSUMPTIONS R17)
-        identity += f"|{linked.app_id.lower()}"
+        identity += f"|{idmask.digest(linked.app_id)}"
     digest = hashlib.sha256(identity.encode()).hexdigest()[:12]
     return Finding(
         id=f"{rule_id}:{digest}",

@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from apl.cli import app
 from apl.collectors.entra import collect_mock
-from apl.redact import mask_id, mask_ids
+from apl.idmask import pseudonym, pseudonymise
 from apl.report import RENDERERS, render
 from apl.scan import run_scan
 
@@ -77,7 +77,7 @@ def report(fix, graph_dir, config):
 def test_no_full_id_in_any_format(report, fmt):
     text = render(report, fmt)
     assert "mail-triage" in text  # the planted app really was reported
-    assert mask_id(PLANTED_APP) in text
+    assert pseudonym("app", PLANTED_APP) in text
     assert GUID.findall(text) == []
 
 
@@ -92,7 +92,7 @@ def test_all_planted_ids_are_in_the_evidence_before_rendering(report):
 def test_app_not_found_warning_is_masked(fix, tmp_path, fmt):
     collect = partial(collect_mock, fix / "graph")
     text = render(run_scan([unknown_app_config(tmp_path)], entra=collect), fmt)
-    assert PLANTED_APP not in text and mask_id(PLANTED_APP) in text
+    assert PLANTED_APP not in text and pseudonym("app", PLANTED_APP) in text
 
 
 def test_cli_stderr_is_masked(fix, tmp_path):
@@ -102,8 +102,9 @@ def test_cli_stderr_is_masked(fix, tmp_path):
     assert GUID.findall(r.output) == []
 
 
-def test_mask_ids_keeps_the_rest_and_can_run_twice():
-    once = mask_ids(f"/applications/{PLANTED_OBJECT}/owners and {PLANTED_KEY}")
-    assert once == "/applications/1a2b...3c2d/owners and ABCD...7890"
-    assert mask_ids(once) == once
-    assert mask_ids("APL-001:d02e76c2cf43 1.2.3") == "APL-001:d02e76c2cf43 1.2.3"
+def test_pseudonymise_keeps_the_rest_and_can_run_twice():
+    once = pseudonymise(f"/applications/{PLANTED_OBJECT}/owners and {PLANTED_KEY}")
+    app, other = pseudonym("app", PLANTED_OBJECT), pseudonym("id", PLANTED_KEY)
+    assert once == f"/applications/{app}/owners and {other}"
+    assert pseudonymise(once) == once
+    assert pseudonymise("APL-001:d02e76c2cf43 1.2.3") == "APL-001:d02e76c2cf43 1.2.3"

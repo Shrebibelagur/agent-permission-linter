@@ -6,6 +6,7 @@ import pytest
 from builders import cred, inventory, server
 
 from apl.collectors.entra import collect_mock
+from apl.idmask import pseudonym
 from apl.models import AgentSpec, CredentialKind, EntraApp, ServerPurpose, Severity
 from apl.parsers.agent_spec import load_agent_spec
 from apl.parsers.mcp_config import ConfigParseError
@@ -43,7 +44,7 @@ def test_positive_no_justification():
     (f,) = check(linked(agent(), application_permissions=["Mail.Send"])).findings
     assert f.rule_id == "APL-006" and f.status == "violation"
     assert f.severity is Severity.MEDIUM
-    assert f.subject == "mail / agent (a1a1...0001) / Mail.Send"
+    assert f.subject == f"mail / agent ({pseudonym('app', APP_ID)}) / Mail.Send"
     assert f.granted == ["Mail.Send (application)"]
     assert f.confidence == 0.95 and "agent.yaml" in f.confidence_reason
     assert f.evidence[0].pointer == "/servicePrincipals/sp1/appRoleAssignments"
@@ -74,7 +75,7 @@ def test_ownerless_app_decides_severity_whatever_the_app_order(ownerless_first):
     ownerless = owned.model_copy(update={"app_id": "other", "owner_ids": []})
     inv.servers[0].entra_apps = [ownerless, owned] if ownerless_first else [owned, ownerless]
     (f,) = check(inv).findings
-    assert f.severity is Severity.HIGH and "other" in f.evidence[0].note
+    assert f.severity is Severity.HIGH and pseudonym("app", "other") in f.evidence[0].note
 
 
 def test_positive_delegated_grant():
@@ -165,7 +166,7 @@ def test_unresolved_app_role_is_skipped_not_passed():
     res = check(inv)
     assert res.findings == []
     (s,) = res.skips
-    assert s.subject == "mail / agent (a1a1...0001) / unresolved-app-role-1234"
+    assert s.subject == f"mail / agent ({pseudonym('app', APP_ID)}) / unresolved-app-role-1234"
     assert s.reason == "not evaluated: missing permission name (unresolved in Graph)"
 
 
@@ -219,7 +220,8 @@ def scan(fix):
 def test_end_to_end_only_the_unjustified_permission_fires(scan):
     """mail holds Mail.ReadWrite, justified in the fixture; mailer holds Mail.Send, not."""
     found = [f for f in scan.result.findings if f.rule_id == "APL-006"]
-    assert [f.subject for f in found] == ["mailer / ownerless-mailer (a6a6...0006) / Mail.Send"]
+    MAILER = pseudonym("app", "a6a6a6a6-0000-4000-8000-000000000006")
+    assert [f.subject for f in found] == [f"mailer / ownerless-mailer ({MAILER}) / Mail.Send"]
     assert found[0].severity is Severity.HIGH  # ownerless-mailer also fires APL-004
     assert found[0].evidence[0].source == "entra-mock"
     assert found[0].id in render(scan, "md")

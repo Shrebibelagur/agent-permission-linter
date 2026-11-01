@@ -5,6 +5,7 @@ Matches on appId (client id). ASSUMPTION G10.
 
 from __future__ import annotations
 
+from apl import idmask
 from apl.collectors.entra import EntraApp, EntraSnapshot
 from apl.models import AppRef, CredentialKind, CredentialRef, Evidence, Inventory, MCPServer
 from apl.redact import redact
@@ -25,6 +26,17 @@ def _declared(inv: Inventory) -> dict[str, str]:
 def linkable_app_ids(inv: Inventory) -> set[str]:
     ids = {c.entra_app_id for s in inv.servers for c in s.credentials if c.entra_app_id}
     return ids | set(_declared(inv).values())
+
+
+def _register_ids(app: EntraApp) -> None:
+    idmask.register("app", app.app_id)
+    if app.application_object_id:
+        idmask.register("app", app.application_object_id)
+    if app.service_principal_id:
+        idmask.register("sp", app.service_principal_id)
+    for c in app.credentials:
+        if c.key_id:
+            idmask.register("cred", c.key_id)
 
 
 def _warnings(srv: MCPServer, app: EntraApp) -> list[str]:
@@ -97,6 +109,7 @@ def link_entra(inv: Inventory, snapshot: EntraSnapshot) -> None:
             linked.append(_link(cred, app, snapshot.source))
             if app not in srv.entra_apps:
                 srv.entra_apps.append(app)
+            _register_ids(app)
             notes.extend(_warnings(srv, app))
         srv.credentials = linked
     inv.warnings.extend(redact(n) for n in dict.fromkeys(notes))

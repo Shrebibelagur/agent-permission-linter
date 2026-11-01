@@ -6,10 +6,12 @@ from functools import partial
 import pytest
 
 from apl.collectors.entra import collect_mock
+from apl.idmask import pseudonym
 from apl.report import render
 from apl.scan import run_scan
 
-FORMAT = re.compile(r"^[\w-]+ / [\w-]+ \([0-9a-f]{4}\.\.\.[0-9a-f]{4}\)( / \S+)*$")
+FORMAT = re.compile(r"^[\w-]+ / [\w-]+ \(app-[0-9a-f]{6}\)( / \S+)*$")
+MAIL_APP = "a1a1a1a1-0000-4000-8000-000000000001"
 LINKED_RULES = {"APL-001", "APL-004", "APL-005", "APL-006"}
 
 
@@ -27,9 +29,11 @@ def test_every_linked_finding_uses_the_format(report):
 
 
 def test_apl001_gets_the_format_from_its_evidence(report):
+    MAIL = pseudonym("app", MAIL_APP)
     [f] = [f for f in report.result.findings if f.rule_id == "APL-001"]
-    assert f.subject == "mail / mail-triage (a1a1...0001) / AZURE_CLIENT_ID"
+    assert f.subject == f"mail / mail-triage ({MAIL}) / AZURE_CLIENT_ID"
 
 
 def test_sarif_still_finds_the_server_location(report):
-    assert "mail-triage (a1a1...0001)" in render(report, "sarif")
+    MAIL = pseudonym("app", MAIL_APP)
+    assert f"mail-triage ({MAIL})" in render(report, "sarif")

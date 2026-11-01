@@ -1,4 +1,4 @@
-"""Report renderers. Every renderer's output is redacted and has its ids masked."""
+"""Report renderers. Every renderer's output goes through apl.redact.scrub."""
 
 from __future__ import annotations
 

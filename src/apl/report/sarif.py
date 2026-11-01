@@ -12,7 +12,7 @@ from pathlib import Path
 
 from apl import __version__
 from apl.models import Finding, Severity
-from apl.redact import mask_ids, redact_obj
+from apl.redact import redact_obj, scrub
 from apl.report.common import display_path, outcome
 from apl.scan import ScanReport
 
@@ -128,4 +128,4 @@ def build_sarif(report: ScanReport) -> dict:
 
 def render_sarif(report: ScanReport) -> str:
     text = json.dumps(redact_obj(build_sarif(report)), indent=2, ensure_ascii=False)
-    return mask_ids(text) + "\n"
+    return scrub(text) + "\n"
