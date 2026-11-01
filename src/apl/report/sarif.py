@@ -45,7 +45,7 @@ def _location(f: Finding, report: ScanReport) -> tuple[str | None, str | None]:
     for e in f.evidence:
         if e.source:
             return e.source, e.pointer
-    server = f.subject.split("/", 1)[0]
+    server = f.subject.split("/", 1)[0].strip()
     for s in report.inventory.servers:
         if s.name == server:
             return s.evidence.source, s.evidence.pointer

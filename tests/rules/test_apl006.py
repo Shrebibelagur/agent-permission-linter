@@ -42,7 +42,8 @@ def linked(spec, owner_ids=("u1",), **grants):
 def test_positive_no_justification():
     (f,) = check(linked(agent(), application_permissions=["Mail.Send"])).findings
     assert f.rule_id == "APL-006" and f.status == "violation"
-    assert f.severity is Severity.MEDIUM and f.subject == "mail/Mail.Send"
+    assert f.severity is Severity.MEDIUM
+    assert f.subject == "mail / agent (a1a1...0001) / Mail.Send"
     assert f.granted == ["Mail.Send (application)"]
     assert f.confidence == 0.95 and "agent.yaml" in f.confidence_reason
     assert f.evidence[0].pointer == "/servicePrincipals/sp1/appRoleAssignments"
@@ -84,7 +85,7 @@ def test_positive_delegated_grant():
 
 def test_positive_each_permission_needs_its_own_reason():
     inv = linked(agent(Mail_Send="digest"), application_permissions=["Mail.Send", "Mail.ReadWrite"])
-    assert [f.subject for f in check(inv).findings] == ["mail/Mail.ReadWrite"]
+    assert [f.subject.split(" / ")[-1] for f in check(inv).findings] == ["Mail.ReadWrite"]
 
 
 @pytest.mark.parametrize("reason", ["", "   ", "\n"])
@@ -164,7 +165,7 @@ def test_unresolved_app_role_is_skipped_not_passed():
     res = check(inv)
     assert res.findings == []
     (s,) = res.skips
-    assert s.subject == "mail/unresolved-app-role-1234"
+    assert s.subject == "mail / agent (a1a1...0001) / unresolved-app-role-1234"
     assert s.reason == "not evaluated: missing permission name (unresolved in Graph)"
 
 
@@ -218,12 +219,12 @@ def scan(fix):
 def test_end_to_end_only_the_unjustified_permission_fires(scan):
     """mail holds Mail.ReadWrite, justified in the fixture; mailer holds Mail.Send, not."""
     found = [f for f in scan.result.findings if f.rule_id == "APL-006"]
-    assert [f.subject for f in found] == ["mailer/Mail.Send"]
+    assert [f.subject for f in found] == ["mailer / ownerless-mailer (a6a6...0006) / Mail.Send"]
     assert found[0].severity is Severity.HIGH  # ownerless-mailer also fires APL-004
     assert found[0].evidence[0].source == "entra-mock"
     assert found[0].id in render(scan, "md")
 
 
 def test_end_to_end_well_managed_app_is_silent_on_every_rule(scan):
-    assert not [f for f in scan.result.findings if f.subject.startswith("managed/")]
+    assert not [f for f in scan.result.findings if f.subject.startswith("managed /")]
     assert any(e.rule_id == "APL-006" and e.subject == "managed" for e in scan.result.evaluated)

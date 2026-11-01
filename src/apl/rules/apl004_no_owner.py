@@ -13,8 +13,8 @@ from apl.models import EntraApp, Evidence, Finding, Inventory, RuleResult, Sever
 from apl.rules.base import (
     ENTRA_ORIGIN,
     NHI1,
-    app_label,
     app_ref,
+    app_subject,
     entra_targets,
     make_finding,
     skip,
@@ -40,7 +40,7 @@ def _finding(server: str, app: EntraApp, origin: str) -> Finding:
         RULE_ID,
         "Entra app linked to this server has no owner",
         Severity.HIGH if risky else Severity.MEDIUM,
-        f"{server}/{app_label(app)}",
+        server,
         status="violation" if home_tenant else "review_required",
         granted=[e.name for e in risky],
         required=["at least one accountable owner"],
@@ -66,7 +66,7 @@ def check(inv: Inventory) -> RuleResult:
         apps, skips = entra_targets(inv, srv, RULE_ID, "owner data")
         res.skips.extend(skips)
         for app in apps:
-            subject = f"{srv.name}/{app_label(app)}"
+            subject = app_subject(srv.name, app)
             if app.owner_ids is None:
                 res.skips.append(skip(RULE_ID, subject, "owner data (Graph refused the request)"))
                 continue

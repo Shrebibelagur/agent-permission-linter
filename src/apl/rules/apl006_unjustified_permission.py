@@ -19,6 +19,7 @@ from apl.rules.base import (
     NHI5,
     app_label,
     app_ref,
+    app_subject,
     entra_targets,
     make_finding,
     skip,
@@ -84,7 +85,11 @@ def check(inv: Inventory) -> RuleResult:
         # A permission is reported once per server, so an ownerless app must be the one reported.
         for app in sorted(apps, key=lambda a: not _ownerless(a)):
             res.skips.extend(
-                skip(RULE_ID, f"{srv.name}/{scope}", "permission name (unresolved in Graph)")
+                skip(
+                    RULE_ID,
+                    app_subject(srv.name, app, scope),
+                    "permission name (unresolved in Graph)",
+                )
                 for scope in app.granted_scopes()
                 if scope.startswith(_UNRESOLVED)
             )

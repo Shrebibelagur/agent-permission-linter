@@ -84,10 +84,16 @@ def kind_confidence(kind_source: str) -> tuple[float, str]:
     return 0.6, "credential kind unknown"
 
 
-def app_label(app: EntraApp) -> str:
+def app_label(app: EntraApp | AppRef) -> str:
     """Display names are tenant-controlled and not unique, so the app id stays in the subject."""
-    masked = mask_id(app.app_id)
-    return f"{_r(app.display_name)[:60]} ({masked})" if app.display_name else masked
+    masked = f"({mask_id(app.app_id.lower())})"
+    return f"{_r(app.display_name)[:60]} {masked}" if app.display_name else masked
+
+
+def app_subject(server: str, app: EntraApp | AppRef, detail: str = "") -> str:
+    """The one subject format for anything about a linked app (ASSUMPTIONS R18)."""
+    subject = f"{server} / {app_label(app)}"
+    return f"{subject} / {detail}" if detail else subject
 
 
 def app_ref(app: EntraApp) -> AppRef:
@@ -112,7 +118,7 @@ def entra_targets(
         skips.append(skip(rule_id, srv.name, f"{missing} (run with --entra or --entra-mock)"))
     else:
         skips += [
-            skip(rule_id, f"{srv.name}/{i}", f"{missing} (app not found in Entra)")
+            skip(rule_id, f"{srv.name} / ({mask_id(i)})", f"{missing} (app not found in Entra)")
             for i in sorted(absent)
         ]
     return srv.entra_apps, skips
@@ -145,9 +151,12 @@ def make_finding(
     mappings: list[MappingRef] | None = None,
     status: str = "violation",
 ) -> Finding:
+    linked = next((e.app for e in evidence or [] if e.app), None)
+    if linked:  # rules give "server/detail"; the evidence says which app that is
+        server, _, detail = subject.partition("/")
+        subject = app_subject(server, linked, detail.replace("/", " / "))
     subj = _r(subject)[:MAX_SUBJECT]
     identity = f"{rule_id}|{subj}"
-    linked = next((e.app for e in evidence or [] if e.app), None)
     if linked:  # two apps can sit behind one server and variable name (ASSUMPTIONS R17)
         identity += f"|{linked.app_id.lower()}"
     digest = hashlib.sha256(identity.encode()).hexdigest()[:12]

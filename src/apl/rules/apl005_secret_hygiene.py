@@ -18,8 +18,8 @@ from apl.redact import mask_id
 from apl.rules.base import (
     ENTRA_ORIGIN,
     NHI7,
-    app_label,
     app_ref,
+    app_subject,
     entra_targets,
     make_finding,
     skip,
@@ -63,7 +63,8 @@ def _check_credential(
     origin: str,
 ) -> None:
     key = mask_id(c.key_id) if c.key_id else index
-    subject = f"{server}/{app_label(app)}/{c.kind}-{key}"
+    detail = f"{c.kind}-{key}"
+    subject = app_subject(server, app, detail)
     if c.end_unreadable:
         res.skips.append(skip(RULE_ID, subject, "credential end date (not a date in Graph)"))
         return
@@ -81,7 +82,7 @@ def _check_credential(
             RULE_ID,
             title,
             severity,
-            subject,
+            f"{server}/{detail}",
             granted=[f"{c.kind} credential: {note}"],
             required=[f"expiry within {MAX_LIFETIME.days} days, rotated before it ends"],
             evidence=[Evidence(source=origin, pointer=c.pointer, note=note, app=app_ref(app))],
@@ -105,7 +106,7 @@ def check(inv: Inventory) -> RuleResult:
         apps, skips = entra_targets(inv, srv, RULE_ID, "credential data")
         res.skips.extend(skips)
         for app in apps:
-            subject = f"{srv.name}/{app_label(app)}"
+            subject = app_subject(srv.name, app)
             if app.service_principal_type == "ManagedIdentity":
                 res.skips.append(
                     skip(RULE_ID, subject, "customer-managed credentials (managed identity)")

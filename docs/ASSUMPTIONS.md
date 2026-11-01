@@ -565,6 +565,13 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   `partialFingerprints` for APL-001, APL-004, APL-005 and APL-006 will see old ids vanish and new ones
   appear. Findings with no linked app (APL-002 on a config secret, APL-007, APL-010) keep theirs.
   The app id is hashed, not printed: `Evidence.app` is excluded from every dump.
+- **R18 [HEURISTIC] Subjects.** Anything about a linked app reads `server / app name (masked id)`,
+  plus ` / detail` where needed (credential, scope, variable). `make_finding` builds it from the
+  evidence, so APL-001's rule code did not change. Subjects are part of the id hash, so this also
+  changes those ids (R17). Masked ids are the first and last four characters. Not in this format:
+  tool findings (`github/delete_repository`) and APL-002 on a config secret, which name no app, and
+  APL-001's scope-mapping skip (`custom/AZURE_CLIENT_ID/Contoso.Frobnicate`), which is built in the
+  rule and has no app to hand.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:

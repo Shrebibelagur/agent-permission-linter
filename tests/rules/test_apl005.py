@@ -48,7 +48,7 @@ def test_positive_expired_still_present_is_medium():
     (f,) = check(linked(secret(start_days_ago=100, lifetime=90))).findings
     assert f.rule_id == "APL-005" and f.status == "violation"
     assert f.severity is Severity.MEDIUM and f.title == "Expired credential still present"
-    assert f.subject == "mail/agent (a1a1...0001)/password-k1"
+    assert f.subject == "mail / agent (a1a1...0001) / password-k1"
     assert f.granted == ["password credential: expired 2026-10-22"]
     assert f.confidence == 0.95 and f.confidence_reason == "dates read directly from Graph"
     assert f.evidence[0].pointer == "/applications/obj1/passwordCredentials"
@@ -69,7 +69,7 @@ def test_positive_no_expiry_is_medium_with_lower_confidence():
 
 def test_key_credentials_are_checked_too():
     (f,) = check(linked(secret(kind="key", lifetime=400))).findings
-    assert "/key-k1" in f.subject
+    assert f.subject.endswith(" / key-k1")
 
 
 def test_expired_long_lived_credential_gives_one_finding():

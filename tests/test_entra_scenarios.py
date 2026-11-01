@@ -28,7 +28,7 @@ def report(fix):
 
 
 def findings_for(report, server, rule=None):
-    found = [f for f in report.result.findings if f.subject.startswith(f"{server}/")]
+    found = [f for f in report.result.findings if f.subject.startswith(f"{server} / ")]
     return [f for f in found if rule is None or f.rule_id == rule]
 
 
@@ -52,7 +52,7 @@ def test_over_scoped_mail_app(report):
 def test_mail_triage_demo_finding_is_pinned(report):
     """The README demo: exact id, severity, confidence and wording."""
     [f] = findings_for(report, "mail", "APL-001")
-    assert f.id == "APL-001:cbd71fa9e09a"
+    assert f.id == "APL-001:e8620271c261"
     assert (f.severity, f.confidence) == (Severity.HIGH, 0.9)
     assert f.confidence_reason == "credential kind verified"
     assert f.fix == (
@@ -71,7 +71,7 @@ def test_correctly_scoped_calendar_app(report):
 def test_app_with_no_owner_is_a_finding_not_a_warning(report):
     [f] = findings_for(report, "files")  # its scope itself is fine, so APL-001 adds nothing
     assert f.rule_id == "APL-004" and f.severity is Severity.MEDIUM and f.status == "violation"
-    assert f.subject == "files/orphan-files (a3a3...0003)"
+    assert f.subject == "files / orphan-files (a3a3...0003)"
     assert f.evidence[0].source == "entra-mock"
     assert apl001_ran(report, "files")
     assert not [w for w in report.inventory.warnings if "no owner" in w]
@@ -84,7 +84,7 @@ def test_ownerless_app_with_a_high_risk_permission_is_high(report):
 
 
 def test_only_ownerless_apps_are_flagged(report):
-    flagged = {f.subject.split("/")[0] for f in report.result.findings if f.rule_id == "APL-004"}
+    flagged = {f.subject.split(" / ")[0] for f in report.result.findings if f.rule_id == "APL-004"}
     assert flagged == {"files", "mailer"}
     ran = [e for e in report.result.evaluated if e.rule_id == "APL-004"]
     assert len(ran) == 8
