@@ -582,7 +582,7 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   `sp-...` or `cred-...`; `id-...` is a GUID of unknown kind.
 
   **Pseudonym.** HMAC-SHA256 under a per-install salt, keyed on kind and lower-cased value, cut to 6
-  hex characters. The salt is `APL_ID_SALT`, else `%APPDATA%\\apl\\id_salt` on Windows or
+  hex characters. The salt is `APL_ID_SALT`, else `%APPDATA%\apl\id_salt` on Windows or
   `$XDG_CONFIG_HOME/apl/id_salt` (default `~/.config`) elsewhere, created on first use and only when
   an identifier is met. It is scrubbed like a secret. Under 16 characters, or unwritable, is a
   `SaltError` and exit 2: printing raw ids is never the fallback.
