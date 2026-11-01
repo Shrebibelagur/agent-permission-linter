@@ -55,6 +55,55 @@
           "startDateTime": "2026-09-01T00:00:00Z"
         }
       ]
+    },
+    {
+      "id": "b8b8b8b8-0000-4000-8000-000000000008",
+      "appId": "a8a8a8a8-0000-4000-8000-000000000008",
+      "displayName": "expired-secret",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [],
+      "passwordCredentials": [
+        {
+          "customKeyIdentifier": null,
+          "displayName": "ci",
+          "endDateTime": "2025-09-01T00:00:00Z",
+          "hint": "Fak",
+          "keyId": "f1f1f1f1-0000-4000-8000-000000000008",
+          "secretText": null,
+          "startDateTime": "2025-06-01T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "b9b9b9b9-0000-4000-8000-000000000009",
+      "appId": "a9a9a9a9-0000-4000-8000-000000000009",
+      "displayName": "long-lived-secret",
+      "publisherDomain": "contoso.example",
+      "signInAudience": "AzureADMyOrg",
+      "keyCredentials": [
+        {
+          "customKeyIdentifier": "AA",
+          "displayName": "cert",
+          "endDateTime": "2028-01-01T00:00:00Z",
+          "key": null,
+          "keyId": "f2f2f2f2-0000-4000-8000-000000000009",
+          "startDateTime": "2026-01-01T00:00:00Z",
+          "type": "AsymmetricX509Cert",
+          "usage": "Verify"
+        }
+      ],
+      "passwordCredentials": [
+        {
+          "customKeyIdentifier": null,
+          "displayName": "ci",
+          "endDateTime": null,
+          "hint": "Fak",
+          "keyId": "f1f1f1f1-0000-4000-8000-000000000009",
+          "secretText": null,
+          "startDateTime": "2026-01-01T00:00:00Z"
+        }
+      ]
     }
   ]
 }

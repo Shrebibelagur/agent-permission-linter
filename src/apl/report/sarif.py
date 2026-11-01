@@ -22,6 +22,7 @@ RULE_META: dict[str, tuple[str, str]] = {
     "APL-001": ("OverScopedPermission", "Granted scope broader than any tool needs"),
     "APL-002": ("SharedCredential", "One fixed credential serves many invokers"),
     "APL-004": ("NoOwner", "Entra app linked to a server has no owner"),
+    "APL-005": ("SecretHygiene", "Entra credential expired, without expiry or long-lived"),
     "APL-007": ("ToolExceedsPurpose", "Tool capability exceeds declared purpose"),
     "APL-010": ("NoApprovalGate", "High-impact tool runs without human approval"),
 }

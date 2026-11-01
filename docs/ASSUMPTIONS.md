@@ -427,6 +427,9 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   https://owasp.org/www-project-non-human-identities-top-10/2025/1-improper-offboarding/ (served
   from owasp.github.io). Only suggested mappings: the title is about offboarding, the fit to APL-004
   is the owner text. ASI03 is not used for APL-004: an owner gap is not privilege abuse.
+  `NHI7:2025 Long-Lived Secrets` covers secrets "with expiration dates that are too far in the future
+  or that don't expire at all". Source:
+  https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/
 - **R2 [HEURISTIC] — Graph naming verified.** Permissions follow
   `{resource}.{operation}.{constraint}`. `ReadWrite` grants "read, create, update, and delete".
   APL-001 maps operations to the capabilities they add over `Read`: Read/ReadBasic → read;
@@ -526,6 +529,22 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   are limited to the signed-in user. Names match case-insensitively but exactly: `<resource>/<scope>`
   from another API (G9) never matches. `User.ReadWrite.All` and `Group.ReadWrite.All` were left out
   to keep the list small, not because they are safe.
+- **R15 [HEURISTIC] APL-005.** One finding per credential on a linked app, the first that applies:
+  no expiry (medium, 0.8), expired (medium, 0.95), lifetime over 180 days (low, 0.95). Exactly 180
+  days passes, and an expired credential is not also reported for lifetime. **Corrected:** the
+  collector used to drop `startDateTime`, and turned an unparseable `endDateTime` into `None`, which
+  would have read as "no expiry". It now keeps the start and records `end_unreadable`.
+  Expiry is judged against `inventory.generated_at`; `run_scan(now=...)` fixes it so fixtures do not
+  expire with the calendar. An empty list counts as "no credentials" only if Graph returned both
+  lists on every object (`credentials_gap`). **No expiry:** `endDateTime` is documented as optional
+  on passwordCredential; on keyCredential it is not marked either way. **Unverified** that Graph
+  really returns null for it, as we have no tenant to check, so confidence is 0.8.
+  Managed identities are skipped: Microsoft says their credentials are managed and rotated by Azure
+  (seen in a search result for the page, not read in full). The 180-day limit is this project's
+  policy, not a Microsoft or OWASP number.
+  Sources: https://learn.microsoft.com/en-us/graph/api/resources/passwordcredential?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0 ,
+  https://learn.microsoft.com/en-us/entra/architecture/service-accounts-managed-identities
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:
@@ -565,8 +584,9 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
 - **G3 [SPEC] Applications and service principals — verified.** `GET /applications`,
   `GET /servicePrincipals`. `id` is the object id; `appId` is the client id, which is what configs
   hold. `passwordCredentials[]` and `keyCredentials[]` both have `keyId` and `endDateTime`.
-  `secretText` is returned only by the initial `addPassword` POST; `hint` holds the secret's first
-  three characters. We copy neither, nor `key`. **We send no `$select`:** the list pages say selecting
+  Both also have `startDateTime`, which we keep for APL-005 (R15). `secretText` is returned only by
+  the initial `addPassword` POST; `hint` holds the secret's first three characters. We copy neither,
+  nor `key`. **We send no `$select`:** the list pages say selecting
   `keyCredentials` returns `key` and carries a 150 requests/minute tenant limit. (The keyCredential
   page disagrees, saying `key` is single-object only. Not selecting avoids both.)
   `servicePrincipalType` is `Application`, `ManagedIdentity`, `Legacy`, `ServiceIdentity` or
@@ -621,8 +641,8 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   no grants gets `[]` and is evaluated; an app not found stays `None` and is skipped with a
   warning. `kind_source: verified` is set only for `servicePrincipalType` `Application` or
   `ManagedIdentity`. Sign-in scopes (`openid`, `profile`, `email`, `offline_access`) have no mapping,
-  so they appear as skips. Expired credentials and per-user grants are warnings, not findings: no
-  rule covers them yet. No owner became APL-004 (R13). `MCPServer.entra_apps` carries the linked
+  so they appear as skips. Per-user grants are warnings, not findings: no rule covers them yet. No
+  owner became APL-004 (R13) and expired credentials became APL-005 (R15). `MCPServer.entra_apps` carries the linked
   apps to rules; it is excluded from any inventory dump, so owner ids stay out of output.
 - **G11 [HEURISTIC] `scopemap.py` — permission names verified, choice of minimum is ours (suggested
   mapping).** Every name in the table was checked against the permissions reference, with

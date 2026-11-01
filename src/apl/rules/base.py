@@ -43,6 +43,12 @@ NHI1 = MappingRef(
     title="Improper Offboarding",
     url="https://owasp.org/www-project-non-human-identities-top-10/2025/1-improper-offboarding/",
 )
+NHI7 = MappingRef(
+    framework="OWASP Non-Human Identities Top 10 2025",
+    id="NHI7:2025",
+    title="Long-Lived Secrets",
+    url="https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/",
+)
 
 # Tools at or below this classifier confidence cannot support a hard verdict.
 LOW_CONFIDENCE = 0.5

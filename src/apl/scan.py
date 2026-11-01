@@ -4,6 +4,7 @@ passed in by the caller. No subprocesses."""
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -39,8 +40,12 @@ def run_scan(
     agent: Path | None = None,
     tools: list[Path] | None = None,
     entra: Callable[[set[str]], EntraSnapshot] | None = None,
+    now: datetime | None = None,
 ) -> ScanReport:
+    """`now` fixes the scan time; APL-005 judges expiry against `inventory.generated_at`."""
     inv = build_inventory(configs, agent, tools)
+    if now is not None:
+        inv.generated_at = now
     if entra is not None:
         link_entra(inv, entra(linkable_app_ids(inv)))
     return ScanReport(inventory=inv, result=run_rules(inv))

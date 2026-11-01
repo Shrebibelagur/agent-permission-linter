@@ -1,11 +1,9 @@
 """Linking Entra apps to credentials, and the capability -> permission table."""
 
-from datetime import UTC, datetime
-
 import pytest
 from builders import cred, inventory, server, tool
 
-from apl.collectors.entra import CredentialExpiry, EntraApp, EntraSnapshot
+from apl.collectors.entra import EntraApp, EntraSnapshot
 from apl.collectors.link import link_entra, linkable_app_ids
 from apl.models import (
     AgentSpec,
@@ -118,22 +116,6 @@ def test_mismatched_ids_warn_and_both_are_linked():
     inv = inventory(server("mail", creds=[id_cred("other")]), agent=agent())
     link_entra(inv, snapshot())
     assert "mail: agent.yaml entra_app_id differs from the config's" in inv.warnings
-
-
-def test_expired_credential_warns_once_across_servers():
-    past = datetime(2020, 1, 1, tzinfo=UTC)
-    snap = snapshot(credentials=[CredentialExpiry(kind="password", end_date_time=past)])
-    inv = inventory(server("mail", creds=[id_cred(), id_cred()]))
-    link_entra(inv, snap)
-    assert inv.warnings.count("mail: Entra app agent has 1 expired credential(s)") == 1
-
-
-def test_future_credential_does_not_warn():
-    future = datetime(2099, 1, 1)  # naive: Graph documents these as UTC
-    snap = snapshot(credentials=[CredentialExpiry(kind="key", end_date_time=future)])
-    inv = inventory(server("mail", creds=[id_cred()]))
-    link_entra(inv, snap)
-    assert inv.warnings == []
 
 
 def test_per_user_grants_are_called_out():

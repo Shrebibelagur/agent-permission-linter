@@ -125,6 +125,26 @@
       "appRoles": [],
       "keyCredentials": [],
       "passwordCredentials": []
+    },
+    {
+      "id": "c8c8c8c8-0000-4000-8000-000000000008",
+      "appId": "a8a8a8a8-0000-4000-8000-000000000008",
+      "displayName": "expired-secret",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
+    },
+    {
+      "id": "c9c9c9c9-0000-4000-8000-000000000009",
+      "appId": "a9a9a9a9-0000-4000-8000-000000000009",
+      "displayName": "long-lived-secret",
+      "accountEnabled": true,
+      "servicePrincipalType": "Application",
+      "appRoles": [],
+      "keyCredentials": [],
+      "passwordCredentials": []
     }
   ]
 }

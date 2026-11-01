@@ -81,8 +81,8 @@ apl scan -c tests/fixtures/entra/mcp.json -t tests/fixtures/entra/tools.json \
 `Directory.Read.All`. It has been tested only against Graph-shaped fixtures, not a real tenant.
 
 Rules: APL-001 over-scoped permission, APL-002 maker-mode/shared credential, APL-004 Entra app with
-no owner, APL-007 tool
-capability exceeds declared purpose, APL-010 no human approval gate. A rule that lacks its input
+no owner, APL-005 secret hygiene, APL-007 tool capability exceeds declared purpose, APL-010 no human
+approval gate. A rule that lacks its input
 says so under **Not evaluated** instead of passing silently. Framework references are labelled
 "suggested mapping".
 
@@ -90,7 +90,7 @@ says so under **Not evaluated** instead of passing silently. Framework reference
 pytest && ruff check .
 ```
 
-Phase status: 1 ✅ models/parsers/classifier · 2 🟡 rules APL-001/002/004/007/010 + `apl scan`
+Phase status: 1 ✅ models/parsers/classifier · 2 🟡 rules APL-001/002/004/005/007/010 + `apl scan`
 reports · 3 🟡 Entra collector (fixture-tested, not yet run on a real tenant) · 4 LLM reasoning
 layer · 6 docs.
 

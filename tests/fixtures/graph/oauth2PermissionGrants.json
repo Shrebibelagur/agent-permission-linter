@@ -32,6 +32,22 @@
       "principalId": null,
       "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
       "scope": "Calendars.Read"
+    },
+    {
+      "clientId": "c8c8c8c8-0000-4000-8000-000000000008",
+      "consentType": "AllPrincipals",
+      "id": "grant-expired",
+      "principalId": null,
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
+      "scope": "Calendars.Read"
+    },
+    {
+      "clientId": "c9c9c9c9-0000-4000-8000-000000000009",
+      "consentType": "AllPrincipals",
+      "id": "grant-long-lived",
+      "principalId": null,
+      "resourceId": "d0d0d0d0-0000-4000-8000-000000000000",
+      "scope": "Calendars.Read"
     }
   ]
 }

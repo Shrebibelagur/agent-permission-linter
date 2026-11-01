@@ -5,8 +5,6 @@ Matches on appId (client id). ASSUMPTION G10.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from apl.collectors.entra import EntraApp, EntraSnapshot
 from apl.models import CredentialKind, CredentialRef, Evidence, Inventory, MCPServer
 from apl.redact import redact
@@ -29,17 +27,9 @@ def linkable_app_ids(inv: Inventory) -> set[str]:
     return ids | set(_declared(inv).values())
 
 
-def _expired(app: EntraApp, now: datetime) -> int:
-    ends = [c.end_date_time for c in app.credentials if c.end_date_time is not None]
-    return sum((e if e.tzinfo else e.replace(tzinfo=UTC)) < now for e in ends)
-
-
-def _warnings(srv: MCPServer, app: EntraApp, now: datetime) -> list[str]:
+def _warnings(srv: MCPServer, app: EntraApp) -> list[str]:
     who = f"{srv.name}: Entra app {app.display_name or app.app_id}"
     out = []
-    expired = _expired(app, now)
-    if expired:
-        out.append(f"{who} has {expired} expired credential(s)")
     if app.service_principal_id is None:
         out.append(f"{who} has no service principal in this tenant, so nothing is granted")
     if app.delegated_per_user:
@@ -71,7 +61,6 @@ def link_entra(inv: Inventory, snapshot: EntraSnapshot) -> None:
     """Mutates `inv`. Credentials are frozen, so each linked one is replaced."""
     inv.entra_source = snapshot.source
     declared = _declared(inv)
-    now = datetime.now(UTC)
     notes: list[str] = []
     for srv in inv.servers:
         creds = list(srv.credentials)
@@ -101,6 +90,6 @@ def link_entra(inv: Inventory, snapshot: EntraSnapshot) -> None:
             linked.append(_link(cred, app, snapshot.source))
             if app not in srv.entra_apps:
                 srv.entra_apps.append(app)
-            notes.extend(_warnings(srv, app, now))
+            notes.extend(_warnings(srv, app))
         srv.credentials = linked
     inv.warnings.extend(redact(n) for n in dict.fromkeys(notes))

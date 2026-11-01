@@ -35,6 +35,18 @@
       "env": {
         "AZURE_CLIENT_ID": "a7a7a7a7-0000-4000-8000-000000000007"
       }
+    },
+    "expired": {
+      "command": "expired-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a8a8a8a8-0000-4000-8000-000000000008"
+      }
+    },
+    "longlived": {
+      "command": "longlived-mcp",
+      "env": {
+        "AZURE_CLIENT_ID": "a9a9a9a9-0000-4000-8000-000000000009"
+      }
     }
   }
 }

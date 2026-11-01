@@ -19,7 +19,7 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from apl.models import CredentialExpiry, EntraApp
 from apl.redact import redact, remember_secret
@@ -44,6 +44,7 @@ NO_SPECIFIC_ROLE = "00000000-0000-0000-0000-000000000000"
 _TENANT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.\-]*$")  # GUID or domain name; goes into a URL
 _ERROR_CODE = re.compile(r"^[a-z_]{1,64}$")
 _FIXTURE_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
+_DATE = TypeAdapter(datetime)
 
 
 class EntraError(RuntimeError):
@@ -270,19 +271,43 @@ def _key(app_id: Any) -> str:
     return str(app_id).lower()
 
 
-def _expiries(obj: dict[str, Any]) -> list[CredentialExpiry]:
-    found = [("password", c) for c in obj.get("passwordCredentials") or []]
-    found += [("key", c) for c in obj.get("keyCredentials") or []]
+def _date(value: Any) -> tuple[datetime | None, bool]:
+    """(date, unreadable). The validation message echoes the input, so it is never surfaced."""
+    if value is None:
+        return None, False
+    try:
+        return _DATE.validate_python(value), False
+    except ValidationError:
+        return None, True
+
+
+def _expiries(obj: dict[str, Any], resource: str = "applications") -> list[CredentialExpiry]:
+    fields = {"password": "passwordCredentials", "key": "keyCredentials"}
     out = []
-    for kind, c in found:
-        if not isinstance(c, dict):
-            continue
-        fields = {"kind": kind, "key_id": _text(c.get("keyId")) or None}
-        try:
-            out.append(CredentialExpiry(**fields, end_date_time=c.get("endDateTime")))
-        except ValidationError:  # its message echoes the input, so it is never surfaced
-            out.append(CredentialExpiry(**fields))
+    for kind, name in fields.items():
+        for c in obj.get(name) or []:
+            if not isinstance(c, dict):
+                continue
+            end, unreadable = _date(c.get("endDateTime"))
+            out.append(
+                CredentialExpiry(
+                    kind=kind,
+                    key_id=_text(c.get("keyId")) or None,
+                    start_date_time=_date(c.get("startDateTime"))[0],
+                    end_date_time=end,
+                    end_unreadable=unreadable,
+                    pointer=f"/{resource}/{_text(obj.get('id'))}/{name}",
+                )
+            )
     return out
+
+
+def _credentials_gap(app: dict[str, Any] | None, sp: dict[str, Any] | None) -> str | None:
+    """An empty result proves "no credentials" only if Graph really returned both lists."""
+    names = ("passwordCredentials", "keyCredentials")
+    if any(not isinstance(o.get(n), list) for o in (app, sp) if o for n in names):
+        return "credential lists absent from the Graph response"
+    return None if app else "application object is in another tenant"
 
 
 def _qualified(resource: dict[str, Any] | None, resource_id: Any, value: str) -> str:
@@ -364,7 +389,8 @@ def collect_entra(
             app_id=app_id,
             display_name=_text((app or sp or {}).get("displayName")),
             application_object_id=_text(app["id"]) if app and app.get("id") else None,
-            credentials=[*_expiries(app or {}), *_expiries(sp or {})],
+            credentials=[*_expiries(app or {}), *_expiries(sp or {}, "servicePrincipals")],
+            credentials_gap=_credentials_gap(app, sp),
         )
         owner_paths = []
         if app and app.get("id"):

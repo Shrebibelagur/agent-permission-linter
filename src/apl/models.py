@@ -116,7 +116,9 @@ class CredentialExpiry(BaseModel):
 
     kind: Literal["password", "key"]
     key_id: str | None = None
-    end_date_time: datetime | None = None
+    start_date_time: datetime | None = None
+    end_date_time: datetime | None = None  # None with end_unreadable False = no expiry set
+    end_unreadable: bool = False  # Graph sent something that is not a date
     pointer: str | None = None
 
 
@@ -129,6 +131,7 @@ class EntraApp(BaseModel):
     service_principal_id: str | None = None  # None: no enterprise app, so nothing is granted
     service_principal_type: str | None = None
     credentials: list[CredentialExpiry] = Field(default_factory=list)
+    credentials_gap: str | None = None  # why `credentials` may be incomplete; None = complete
     # ids only: names and UPNs are personal data. None = not collected; [] = Graph says no owners.
     owner_ids: list[str] | None = None
     delegated_all_principals: list[str] = Field(default_factory=list)  # admin consent, all users

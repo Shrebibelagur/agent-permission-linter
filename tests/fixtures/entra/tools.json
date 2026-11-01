@@ -52,5 +52,25 @@
         "name": "get_event"
       }
     ]
+  },
+  "expired": {
+    "tools": [
+      {
+        "name": "list_events"
+      },
+      {
+        "name": "get_event"
+      }
+    ]
+  },
+  "longlived": {
+    "tools": [
+      {
+        "name": "list_events"
+      },
+      {
+        "name": "get_event"
+      }
+    ]
   }
 }

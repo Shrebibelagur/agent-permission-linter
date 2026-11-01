@@ -211,7 +211,7 @@ def test_unexpected_crash_prints_no_locals(fix, graph_dir, monkeypatch):
 def test_malformed_expiry_keeps_the_credential_without_a_date():
     obj = {"passwordCredentials": [{"keyId": "k", "endDateTime": "tomorrow-ish"}]}
     [c] = entra._expiries(obj)
-    assert c.key_id == "k" and c.end_date_time is None
+    assert c.key_id == "k" and c.end_date_time is None and c.end_unreadable
 
 
 def test_remember_secret_scrubs_exact_values_only():
