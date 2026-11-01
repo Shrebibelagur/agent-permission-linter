@@ -27,7 +27,7 @@
         "https://relay.example.test/[path-redacted]",
         "--build",
         "server-1.24.3-alpha.20261101",
-        "--client=qT7vZ2mK9xLw4RbN8sYc3Hd6"
+        "--client=[REDACTED]"
       ],
       "env_keys": [],
       "credentials": [],

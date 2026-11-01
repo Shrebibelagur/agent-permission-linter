@@ -24,6 +24,7 @@ from apl.redact import (
     looks_like_secret,
     redact,
     redact_args,
+    redact_random_tokens,
     redact_url,
 )
 
@@ -148,6 +149,7 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
             continue
         ev = Evidence(source=source, pointer=ptr)
         args, inline_in_args = redact_args([str(a) for a in entry.get("args") or []])
+        args = [redact_random_tokens(a) for a in args]  # a guess, so it does not count as inline
         creds: list[CredentialRef] = []
         env = entry.get("env") or {}
         for k, v in env.items():
@@ -219,7 +221,11 @@ def parse_config_dict(data: dict[str, Any], source: str) -> tuple[list[MCPServer
             MCPServer(
                 name=name,
                 transport=transport,
-                command=redact(str(entry["command"])) if entry.get("command") else None,
+                command=(
+                    redact_random_tokens(redact(str(entry["command"])))
+                    if entry.get("command")
+                    else None
+                ),
                 args=args,
                 url=redact_url(str(url)) if url else None,
                 env_keys=sorted(env.keys()),

@@ -630,6 +630,19 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
     could see an empty file and stop with a `SaltError`; the next run works unless the file stayed
     empty, in which case delete it.
   - Not run against a real tenant. Log coverage was tested with httpx 0.28.1's own logging.
+- **R22 [HEURISTIC] Random-looking tokens in `command` and `args` — changed default output,
+  2026-11-01.** Secrets with a known shape were already removed (`redact.py`); this adds a guess for
+  ones without. A token is a run of 20 or more of `A-Za-z0-9_+~-`, so separators such as `/`, `.`, `=`
+  and spaces end it, and a path or version loses only the random part. It becomes `[REDACTED]` when
+  it has all of: upper case, lower case and digits; Shannon entropy of at least 3.8 bits per
+  character; and at least 0.3 moves per character between upper, lower and digit. The thresholds are
+  ours, chosen from the test cases, and are not measured on real configs. Replaced at parse time, so
+  no flag brings a token back. It never sets `inline_secret_detected`: APL-002 states that as fact.
+  **Limits.** It misses low-entropy secrets (`Summer2026Password1234`-style, repeated characters),
+  single-case or digit-free ones (lower-case hex, such as a SHA-256 key), anything under 20
+  characters, and a secret broken up by separators. It can over-redact: a random-looking build id or
+  content hash is replaced too, which `[REDACTED]` makes visible but no flag undoes. It covers
+  `command` and `args` only, not env values (never kept), URLs (R21) or free text.
 - **R20 [HEURISTIC] `--anonymise-names`, off by default.** R19 leaves names readable; this flag
   replaces Entra app and service principal display names (including other APIs' names, printed
   inside `<resource>/<scope>`) and server names from the config and agent.yaml with

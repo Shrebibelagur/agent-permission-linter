@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import logging
+import math
 import re
 import traceback
+from collections import Counter
+from itertools import pairwise
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -24,6 +27,11 @@ _PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"[A-Za-z0-9_~.\-]{3}8Q~[A-Za-z0-9_~.\-]{31,}"),  # Entra client secret
     re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-.=]{8,}"),
 ]
+
+MIN_TOKEN_CHARS = 20
+MIN_TOKEN_ENTROPY = 3.8  # bits per character; 20 distinct characters reach 4.3
+MIN_KIND_CHANGES = 0.3  # share of steps moving between upper, lower and digit; camelCase is lower
+_TOKEN = re.compile(rf"[A-Za-z0-9_+~\-]{{{MIN_TOKEN_CHARS},}}")
 
 PATH_REDACTED = "[path-redacted]"
 # Any scheme but file: SARIF artifact uris are local paths the reader already has.
@@ -89,6 +97,28 @@ def env_reference_name(value: str) -> str | None:
     if m.group("path"):
         return "file:" + m.group("path")
     return ("input:" if m.group("kind") == "input:" else "") + m.group("n1")
+
+
+def _looks_random(token: str) -> bool:
+    """R22. All three must hold, as each alone fires on ordinary long names."""
+    if not (
+        any(c.isupper() for c in token)
+        and any(c.islower() for c in token)
+        and any(c.isdigit() for c in token)
+    ):
+        return False
+    size = len(token)
+    entropy = -sum(n / size * math.log2(n / size) for n in Counter(token).values())
+    if entropy < MIN_TOKEN_ENTROPY:
+        return False
+    kinds = ["u" if c.isupper() else "l" if c.islower() else "d" for c in token if c.isalnum()]
+    changes = sum(a != b for a, b in pairwise(kinds))
+    return changes / size >= MIN_KIND_CHANGES
+
+
+def redact_random_tokens(value: str) -> str:
+    """Tokens are cut at separators, so a path or version keeps everything but the random part."""
+    return _TOKEN.sub(lambda m: REDACTED if _looks_random(m.group()) else m.group(), value)
 
 
 def remember_secret(value: str) -> None:

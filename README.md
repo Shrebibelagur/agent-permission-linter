@@ -70,6 +70,23 @@ The well-scoped fixture in `tests/fixtures/clean/` produces no findings
 Exit codes: `0` no finding at or above `--fail-on` · `1` at least one (use in CI) · `2` parse,
 write or Entra error, or `--connect`.
 
+### Random-looking tokens
+
+Known token shapes are always removed. On top of that, any token of 20 or more characters in a
+server's `command` or `args` becomes `[REDACTED]` if it looks random: it mixes upper case, lower case
+and digits, with high entropy and frequent changes between them. Only that token goes, so
+`C:/keys/<token>/run.exe` keeps its path. No flag brings it back.
+
+This is a guess, with two kinds of error:
+
+- **It misses secrets:** low-entropy ones, lower-case hex, anything under 20 characters, and anything
+  outside `command` and `args`.
+- **It can over-redact:** a random-looking build id or content hash is replaced too. Check the config
+  itself if a value you expected shows `[REDACTED]`.
+
+Long ordinary paths, package names and version strings are left alone. A guess never counts as an
+inline secret, so it does not raise an APL-002 finding.
+
 ### Identifiers and `APL_ID_SALT`
 
 Reports never print a full tenant, client or object id. They print a pseudonym such as
