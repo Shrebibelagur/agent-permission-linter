@@ -46,9 +46,9 @@ _ENTRA_NOTICE = (
 _FREE_TEXT_NOTICE = "free-text fields are not masked: review before sharing"
 _SHOW_IDS_HELP = "Print real Entra ids (local debugging only). Secrets stay redacted."
 _ANONYMISE_HELP = (
-    "Replace Entra display names, server, agent and owner names, and inventory commands, args "
-    "and urls "
-    "with pseudonyms. Finding titles and permission names still print."
+    "Replace Entra display names and server, agent and owner names with pseudonyms, and inventory "
+    "commands, args and urls with placeholders. "
+    "Finding titles and permission names still print."
 )
 
 

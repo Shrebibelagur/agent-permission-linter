@@ -649,11 +649,13 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
 
   The agent name is replaced too (`agent-name-...`), and the owner (`owner-name-...`): by field in
   `apl inventory`, the only place it prints as a field, and wherever free text quotes it exactly,
-  such as a `justification` that APL-007 repeats in its fix. In `apl inventory`, `command`, `args` and `url`
-  become `command-name-...` and `url-name-...`, by field. Args become placeholders, `[arg-1]`,
-  `[arg-2]`, numbered per server. They are not pseudonyms because an arg we did not recognise as a
-  secret may still be one, and secrets are never hashed. So nothing derived from an arg value
-  prints, and the same value on two servers cannot be matched. An arg holding `[REDACTED]` is left
+  such as a `justification` that APL-007 repeats in its fix. In `apl inventory`, `command`, `url` and `args`
+  become placeholders, by field: `[cmd-2]` and `[url-2]` name the second server's, and `[arg-1]`,
+  `[arg-2]` restart on each server. They are not pseudonyms because such a value may hold a secret
+  nothing recognises, such as the path of a webhook url, and secrets are never hashed. So nothing
+  derived from these values prints, and the same value on two servers cannot be matched. Without
+  the flag `apl inventory` prints such a url path in full: `redact_url` removes only userinfo and
+  query strings. An arg holding `[REDACTED]` is left
   as it is, so the removal stays visible.
 
   **Limits: what still prints.**
@@ -680,8 +682,8 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
 
   Other limits. A server named after a common word (`files`) also replaces that word wherever it
   stands alone, such as in fix text: this errs towards hiding and only hurts readability. Quoted text
-  is masked only where it holds a registered name exactly. Placeholders hide each arg, not how many there are or
-  where a redacted one sits. Pseudonyms stop casual reading, not someone who can guess a name and holds the salt.
+  is masked only where it holds a registered name exactly. Placeholders hide each value, not how many args there are, where a
+  redacted one sits or which servers are local. Pseudonyms stop casual reading, not someone who can guess a name and holds the salt.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:

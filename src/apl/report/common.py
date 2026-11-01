@@ -82,18 +82,20 @@ def _placeholder_args(args: list[str]) -> list[str]:
 
 
 def inventory_data(inv: Inventory) -> dict:
-    """The JSON-like inventory for `apl inventory`. Commands, args and urls go by field, not by
-    registered name: registering `npx` would replace that word everywhere."""
+    """The JSON-like inventory for `apl inventory`. Commands, args and urls go by field, as
+    registering `npx` would replace that word everywhere. They become placeholders, not
+    pseudonyms: a webhook url holds its secret in the path, and secrets are never hashed.
+    N is the server's position, so `[cmd-2]` and `[url-2]` are the same server."""
     data = inv.model_dump(mode="json", exclude_none=True)
     if not idmask.anonymising_names():
         return data
     if "owner" in data.get("agent", {}):
         data["agent"]["owner"] = idmask.pseudonym("owner-name", data["agent"]["owner"])
-    for srv in data["servers"]:
+    for index, srv in enumerate(data["servers"], start=1):
         if "command" in srv:
-            srv["command"] = idmask.pseudonym("command-name", srv["command"])
+            srv["command"] = f"[cmd-{index}]"
         if "url" in srv:
-            srv["url"] = idmask.pseudonym("url-name", srv["url"])
+            srv["url"] = f"[url-{index}]"
         srv["args"] = _placeholder_args(srv.get("args", []))
     return idmask.mask_names_obj(data)
 

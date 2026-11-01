@@ -86,9 +86,9 @@ def test_inventory_fields_are_pseudonyms(world):
     r, data = inventory(world, "--anonymise-names")
     assert_clean(stdout=r.stdout, stderr=r.stderr)
     local, remote = data["servers"]
-    assert local["command"] == pseudonym("command-name", COMMAND)
+    assert local["command"] == "[cmd-1]"
     assert local["args"] == ["[arg-1]", "[arg-2]", "[arg-3]", REDACTED]
-    assert remote["url"] == pseudonym("url-name", URL)
+    assert remote["url"] == "[url-2]"
     assert data["agent"]["name"] == pseudonym("agent-name", AGENT)
 
 
@@ -149,7 +149,7 @@ def test_plain_command_word_is_not_replaced_elsewhere(tmp_path):
     config = tmp_path / "mcp.json"
     config.write_text(json.dumps({"mcpServers": {"npx": {"command": "npx"}}}), encoding="utf-8")
     r = run("inventory", "-c", config, "--anonymise-names")
-    assert pseudonym("command-name", "npx") in r.stdout
+    assert "[cmd-1]" in r.stdout
     assert pseudonym("server-name", "npx") in r.stdout
 
 

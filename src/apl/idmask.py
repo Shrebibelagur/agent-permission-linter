@@ -21,7 +21,6 @@ from typing import Any
 
 NAME_KINDS = frozenset(
     {"app-name", "sp-name", "cred-name", "server-name", "agent-name", "owner-name"}
-    | {"command-name", "url-name"}
 )
 KINDS = frozenset({"app", "tenant", "sp", "cred", "id"}) | NAME_KINDS  # "id": unknown GUID
 SALT_ENV = "APL_ID_SALT"
