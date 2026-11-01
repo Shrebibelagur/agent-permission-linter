@@ -56,6 +56,18 @@ def test_match_is_by_app_id_and_case_insensitive():
     assert inv.entra_source == "mock"
 
 
+def test_evidence_spells_out_grant_counts():
+    inv = inventory(server("mail", creds=[id_cred()]))
+    link_entra(
+        inv,
+        snapshot(delegated_all_principals=["Calendars.Read", "a"], delegated_per_user=["b"]),
+    )
+    assert inv.servers[0].credentials[0].evidence.note == (
+        "Entra (mock): agent; 1 application permission(s), 3 delegated scope(s) "
+        "(tenant-wide consent: 2, per-user: 1)"
+    )
+
+
 def test_managed_identity_kind_comes_from_entra():
     inv = inventory(server("mail", creds=[id_cred()]))
     link_entra(inv, snapshot(service_principal_type="ManagedIdentity"))

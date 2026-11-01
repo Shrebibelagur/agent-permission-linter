@@ -41,11 +41,13 @@ def _link(cred: CredentialRef, app: EntraApp, source: str) -> CredentialRef:
     origin = "graph.microsoft.com/v1.0" if source == "live" else "entra-mock"
     resource = "servicePrincipals" if app.service_principal_id else "applications"
     object_id = app.service_principal_id or app.application_object_id
+    tenant_wide = len(app.delegated_all_principals)
+    per_user = len(app.delegated_per_user)
     note = (
         f"Entra ({source}): {app.display_name or app.app_id}; "
         f"{len(app.application_permissions)} application permission(s), "
-        f"{len(app.delegated_all_principals)} tenant-wide and "
-        f"{len(app.delegated_per_user)} per-user delegated scope(s)"
+        f"{tenant_wide + per_user} delegated scope(s) "
+        f"(tenant-wide consent: {tenant_wide}, per-user: {per_user})"
     )
     update: dict = {
         "granted_scopes": app.granted_scopes(),

@@ -40,7 +40,7 @@ Remove or narrow Mail.ReadWrite: no tool on 'mail' needs delete/write. Grant the
 
 - Confidence 0.90: credential kind verified
 - Granted: Mail.ReadWrite; required: read
-- Evidence: `entra-mock` `/servicePrincipals/c1c1...0001`: Entra (mock): mail-triage; 1 application permission(s), 0 tenant-wide and 0 per-user delegated scope(s)
+- Evidence: `entra-mock` `/servicePrincipals/c1c1...0001`: Entra (mock): mail-triage; 1 application permission(s), 0 delegated scope(s) (tenant-wide consent: 0, per-user: 0)
 - Suggested mapping: [LLM06:2025 Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
 - Suggested mapping: [ASI03 Identity &amp; Privilege Abuse](https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/)
 
