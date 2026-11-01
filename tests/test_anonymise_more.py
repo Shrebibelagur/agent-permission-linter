@@ -151,3 +151,36 @@ def test_plain_command_word_is_not_replaced_elsewhere(tmp_path):
     r = run("inventory", "-c", config, "--anonymise-names")
     assert pseudonym("command-name", "npx") in r.stdout
     assert pseudonym("server-name", "npx") in r.stdout
+
+
+NOTICE = "free-text fields are not masked: review before sharing"
+
+
+def test_inventory_notice_goes_to_stderr_under_the_flag(world):
+    r, _ = inventory(world, "--anonymise-names")
+    assert NOTICE in r.stderr and NOTICE not in r.stdout
+
+
+def test_inventory_has_no_notice_without_the_flag(world):
+    r, _ = inventory(world)
+    assert NOTICE not in r.stderr
+
+
+def test_notice_keeps_stdout_parseable_and_comes_with_show_ids(world):
+    r, data = inventory(world, "--anonymise-names", "--show-ids")
+    assert NOTICE in r.stderr and data["servers"]
+
+
+def test_no_notice_when_the_inventory_fails(tmp_path):
+    r = run("inventory", "-c", tmp_path / "missing.json", "--anonymise-names")
+    assert r.exit_code != 0 and NOTICE not in r.stderr
+
+
+def test_free_text_really_is_printed_as_written(tmp_path):
+    """Pins the documented behaviour: if this changes, the docs and the notice must too."""
+    config, agent = tmp_path / "mcp.json", tmp_path / "agent.yaml"
+    server = {"command": "c", "env": {"FABRIKAM_API_KEY": "${KEY}"}}
+    config.write_text(json.dumps({"mcpServers": {"s": server}}), encoding="utf-8")
+    agent.write_text("name: a\npurpose: Helps the payroll team\n", encoding="utf-8")
+    r = run("inventory", "-c", config, "-a", agent, "--anonymise-names")
+    assert "Helps the payroll team" in r.stdout and "FABRIKAM_API_KEY" in r.stdout

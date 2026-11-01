@@ -12,6 +12,7 @@ STILL_PRINTS = [
     "environment variable and header names",
     "`justification`",
     "config file paths",
+    "Free text prints as written",
     "`purpose`",
     "`env_keys`",
 ]
@@ -29,6 +30,15 @@ def test_r20_covers_the_same_list():
     r20 = r20[: r20.index("- **R7 [CLIENT]")].lower()
     for item in ("tool names", "custom permission names", "contain a server name"):
         assert item in r20
+
+
+def test_r20_says_free_text_prints_as_written():
+    docs = (ROOT / "docs/ASSUMPTIONS.md").read_text(encoding="utf-8")
+    r20 = docs[docs.index("**R20 [HEURISTIC]") :]
+    r20 = r20[: r20.index("- **R7 [CLIENT]")]
+    assert "`purpose`, `justification` text and `env_keys` are free text" in r20
+    assert "printed as\n  written" in r20
+    assert "free-text fields are not masked: review before sharing" in r20
 
 
 def test_env_example_holds_no_salt_value():

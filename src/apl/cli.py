@@ -43,6 +43,7 @@ _ENTRA_NOTICE = (
 )
 
 
+_FREE_TEXT_NOTICE = "free-text fields are not masked: review before sharing"
 _SHOW_IDS_HELP = "Print real Entra ids (local debugging only). Secrets stay redacted."
 _ANONYMISE_HELP = (
     "Replace Entra display names, server, agent and owner names, and inventory commands, args "
@@ -133,6 +134,8 @@ def inventory(
             raise typer.Exit(1) from None
         for w in inv.warnings:
             _say(f"warning: {w}")
+        if anonymise_names:
+            _say(_FREE_TEXT_NOTICE)
         typer.echo(text)
 
 

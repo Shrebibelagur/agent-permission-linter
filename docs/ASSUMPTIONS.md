@@ -671,6 +671,13 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   - Capabilities, severities, rule ids and evidence dates.
   - **`apl inventory` only:** the agent's `purpose`, `data_classification` and `justifications`, plus `env_keys`, `required_tools` and `required_graph_permissions`.
 
+  **Free text.** `purpose`, `justification` text and `env_keys` are free text and are printed as
+  written. We cannot tell what such text says, so the flag does not try: the only change is that a
+  registered name quoted exactly is replaced. "The payroll team" stays. `justification` reaches
+  reports through APL-007; `purpose` and `env_keys` print in `apl inventory`, which says on stderr
+  under this flag: "free-text fields are not masked: review before sharing". `apl scan` prints no such
+  line, though a report can hold `justification` text.
+
   Other limits. A server named after a common word (`files`) also replaces that word wherever it
   stands alone, such as in fix text: this errs towards hiding and only hurts readability. Quoted text
   is masked only where it holds a registered name exactly. Placeholders hide each arg, not how many there are or
