@@ -558,20 +558,77 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   rule is skipped, as justifications could not exist. An unresolved app role (G5) might be high-risk,
   so it is skipped by name, not passed. G10 applies: delegated grants count though a given token may
   not carry them. `required_graph_permissions` in agent.yaml is not a justification.
-- **R17 [HEURISTIC] Finding ids — changed 2026-11-01.** An id is the first 12 hex characters of
-  SHA-256 over rule id, subject and, when the evidence names a linked Entra app, its lower-case
-  appId. Two apps behind one server and variable name no longer share an id. **Every finding about
-  a linked app gets a new id once**, so baselines, suppressions and SARIF
-  `partialFingerprints` for APL-001, APL-004, APL-005 and APL-006 will see old ids vanish and new ones
-  appear. Findings with no linked app (APL-002 on a config secret, APL-007, APL-010) keep theirs.
-  The app id is hashed, not printed: `Evidence.app` is excluded from every dump.
+- **R17 [HEURISTIC] Finding ids — changed twice on 2026-11-01.** An id is the first 12 hex
+  characters of SHA-256 over rule id, pseudonymised subject and, when the evidence names a linked
+  Entra app, a keyed digest of its appId (R19). Two apps behind one server and variable name no
+  longer share an id. **Ids of findings about a linked app changed**, so baselines, suppressions and
+  SARIF `partialFingerprints` for APL-001, APL-004, APL-005 and APL-006 will see old ids vanish and
+  new ones appear. **They now also depend on the salt** (R19). Findings with no linked app (APL-002
+  on a config secret, APL-007, APL-010) keep theirs, on every install. The app id is never printed:
+  `Evidence.app` is excluded from every dump.
 - **R18 [HEURISTIC] Subjects.** Anything about a linked app reads `server / app name (masked id)`,
   plus ` / detail` where needed (credential, scope, variable). `make_finding` builds it from the
   evidence, so APL-001's rule code did not change. Subjects are part of the id hash, so this also
-  changes those ids (R17). Masked ids are the first and last four characters. Not in this format:
+  changes those ids (R17). The id shown is a pseudonym (R19). Not in this format:
   tool findings (`github/delete_repository`) and APL-002 on a config secret, which name no app, and
   APL-001's scope-mapping skip (`custom/AZURE_CLIENT_ID/Contoso.Frobnicate`), which is built in the
   rule and has no app to hand.
+- **R19 [HEURISTIC] Identifier pseudonyms and secret hygiene (`apl/idmask.py`).** Our design, not
+  a standard; replaces the `a1a1...0001` masking.
+
+  **Two classes.** Secrets are removed outright as `[REDACTED]` and never hashed, because a hash of
+  a secret can be guessed against. Identifiers (tenant, client, object and key ids) are not secrets,
+  but they say whose tenant a report is about, so they become `app-3f9a1c`, `tenant-9b02e4`,
+  `sp-...` or `cred-...`; `id-...` is a GUID of unknown kind.
+
+  **Pseudonym.** HMAC-SHA256 under a per-install salt, keyed on kind and lower-cased value, cut to 6
+  hex characters. The salt is `APL_ID_SALT`, else `%APPDATA%\\apl\\id_salt` on Windows or
+  `$XDG_CONFIG_HOME/apl/id_salt` (default `~/.config`) elsewhere, created on first use and only when
+  an identifier is met. It is scrubbed like a secret. Under 16 characters, or unwritable, is a
+  `SaltError` and exit 2: printing raw ids is never the fallback.
+
+  **Where it runs.** `redact()` removes secrets, then exact known ids (tenant, client, linked objects),
+  case-insensitively, even in free text. `scrub()` adds Graph paths, the token endpoint (either form
+  of tenant, GUID or domain) and any other GUID. These all go through `scrub()`: the md, json and
+  sarif renderers (so stdout and `--out`), `apl inventory`, every CLI message, `EntraError` when it is
+  made, and each log record through a record factory. httpx logs full URLs at INFO, including the
+  token endpoint. A crash inside a command becomes `UnexpectedError`, with its message scrubbed and
+  the original frames dropped; only its type name survives.
+
+  **`--show-ids`** turns off identifier replacement for one command, with a stderr warning. Secret
+  removal comes first in `redact()` and never reads the flag. Finding ids are computed from the
+  pseudonymised subject, so they are the same with or without it.
+
+  **Proof.** `tests/test_no_leaks.py` plants a tenant, client, object GUID and client secret and
+  checks stdout, stderr, md, json, sarif, `--out`, logs and tracebacks, in mock and live scans, five
+  simulated failures and one real process. On 2026-11-01, 27 guards were each broken in a throwaway
+  copy: 25 failed a test at once. The two that did not exposed a test that could never fail
+  (`--show-ids` outliving the command) and a crash where a clean error belonged, unnoticed because a
+  second guard held; both are now caught. The harness itself is not in the repo.
+
+  **Limits.**
+  - **Finding ids now depend on the salt.** Two installs give different ids for the same app, and
+    losing or changing the salt changes them all, which breaks baselines and SARIF deduplication
+    across machines. Set the same `APL_ID_SALT` on every machine that must agree. We chose this over
+    an unsalted hash, which anyone holding a candidate appId could confirm, and which would link
+    a multi-tenant app across reports from different organisations.
+  - **Pseudonymous, not anonymous.** Display names, server names and permissions are still printed
+    and can identify a tenant on their own.
+  - **6 hex characters collide.** That is 24 bits: about even odds of one collision among some 4,800
+    ids. Fine for reading a report, wrong as a key, so finding ids use the full digest.
+  - One app has two pseudonyms, as its appId and object id are different values.
+  - Matching is on exact values, GUID shape and known Graph paths. An id split, encoded or in another
+    shape is not caught, nor is a non-GUID id in free text. Known ids under 8 characters are skipped
+    so they cannot eat ordinary words. G12's limit on short secrets stands.
+  - The crash guard covers command bodies. Argument errors and failures at import happen outside it.
+  - The log factory is process-wide and is defeated by code that replaces it afterwards, or that
+    writes straight to stderr. Finding objects and `MCPServer.entra_apps` hold raw values in memory.
+  - `--show-ids` warns on stderr only: a saved `--out` file carries no mark that it holds real ids.
+  - The salt file mode is 0600, which is a POSIX protection. On Windows it relies on the ACLs of the
+    profile folder (**unverified**; the test is skipped there). Two first runs at the same instant
+    could see an empty file and stop with a `SaltError`; the next run works unless the file stayed
+    empty, in which case delete it.
+  - Not run against a real tenant. Log coverage was tested with httpx 0.28.1's own logging.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:
@@ -687,8 +744,8 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   pattern (the `8Q~` shape is observed, not documented). The values stay in process memory only.
   (3) Rich tracebacks are set not to print locals, and errors never chain the request. Each
   layer is tested alone. Not covered: a secret shorter than 8 characters is not scrubbed by exact
-  match, and a third-party library logging at DEBUG would be outside `redact()`; httpx at this
-  version logs the URL, which never holds a credential.
+  match. Third-party logging now goes through the record factory (R19); httpx's URLs hold no
+  credential, but they do hold the tenant and object ids, which R19 replaces.
 
 ## Reports (`apl scan`)
 
