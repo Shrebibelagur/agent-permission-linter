@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from apl import __version__
+from apl import __version__, idmask
 from apl.redact import redact_obj, scrub
 from apl.report.common import collect_limits, display_path, summary_counts
 from apl.scan import ScanReport
@@ -25,7 +25,7 @@ def _finding(f) -> dict:
 
 def build_json(report: ScanReport) -> dict:
     inv = report.inventory
-    return {
+    data = {
         "schema_version": SCHEMA_VERSION,
         "tool": {"name": "apl", "version": __version__},
         "generated_at": inv.generated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -55,6 +55,9 @@ def build_json(report: ScanReport) -> dict:
         ],
         "limits": collect_limits(report).model_dump(mode="json"),
     }
+    if idmask.showing_ids():
+        data["contains_real_ids"] = True  # absent otherwise; adding a key is minor (R10)
+    return data
 
 
 def render_json(report: ScanReport) -> str:

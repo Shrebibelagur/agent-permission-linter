@@ -17,6 +17,7 @@ STANDING_LIMITS = [
     "Framework references are suggested mappings, not compliance claims.",
     "Granted scopes (APL-001) need Entra data (--entra or --entra-mock); otherwise skipped.",
 ]
+REAL_IDS_WARNING = "WARNING: this report contains real identifiers"
 ENTRA_LIMITS = {
     "mock": "Entra data came from saved fixtures (--entra-mock), not a real tenant.",
     "live": "Entra data was read from Microsoft Graph during this scan (GET only).",

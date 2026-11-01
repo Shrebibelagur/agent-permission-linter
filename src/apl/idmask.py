@@ -196,6 +196,10 @@ def mask(text: str) -> str:
     return named if _show_ids else pseudonymise(named)
 
 
+def showing_ids() -> bool:
+    return _show_ids
+
+
 def set_show_ids(on: bool) -> None:
     global _show_ids
     _show_ids = on

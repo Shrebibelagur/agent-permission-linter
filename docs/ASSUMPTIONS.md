@@ -595,8 +595,10 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   token endpoint. A crash inside a command becomes `UnexpectedError`, with its message scrubbed and
   the original frames dropped; only its type name survives.
 
-  **`--show-ids`** turns off identifier replacement for one command, with a stderr warning. Secret
-  removal comes first in `redact()` and never reads the flag. Finding ids are computed from the
+  **`--show-ids`** turns off identifier replacement for one command, with a stderr warning. The
+  report also says so itself, to `--out` and stdout alike: a first line in md, a top-level
+  `contains_real_ids: true` in json (absent otherwise), and a warning notification plus
+  `containsRealIds` in sarif. Secret removal comes first in `redact()` and never reads the flag. Finding ids are computed from the
   pseudonymised subject, so they are the same with or without it.
 
   **Proof.** `tests/test_no_leaks.py` plants a tenant, client, object GUID and client secret and
@@ -623,7 +625,6 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   - The crash guard covers command bodies. Argument errors and failures at import happen outside it.
   - The log factory is process-wide and is defeated by code that replaces it afterwards, or that
     writes straight to stderr. Finding objects and `MCPServer.entra_apps` hold raw values in memory.
-  - `--show-ids` warns on stderr only: a saved `--out` file carries no mark that it holds real ids.
   - The salt file mode is 0600, which is a POSIX protection. On Windows it relies on the ACLs of the
     profile folder (**unverified**; the test is skipped there). Two first runs at the same instant
     could see an empty file and stop with a `SaltError`; the next run works unless the file stayed
@@ -788,6 +789,7 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   The schema is not re-validated in CI (no `jsonschema` dependency); tests check structure.
 - **R10 [HEURISTIC] JSON report.** `schema_version: "1.0"`, with top-level keys pinned by a
   test. Bump the major version on removed or renamed keys or changed types; adding keys is minor.
+  `contains_real_ids` is present only under `--show-ids`, so a default report's keys do not change.
 - **R12 [HEURISTIC] "Evaluated" wording.** Each rule records a `(rule, subject)` entry in
   `RuleResult.evaluated` once it gets past its skips. A server a rule does not apply to (e.g.
   APL-001 on a server with no credential) is neither evaluated nor skipped. Reports never say
