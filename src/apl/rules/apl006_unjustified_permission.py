@@ -3,7 +3,8 @@
 agent.yaml has an optional `justifications` mapping (permission -> reason). A high-risk Graph
 permission (apl.highrisk) held by an app linked to a server needs an entry there. A blank reason
 is no reason. The mapping is per agent, and an entry is an owner's statement that is not checked
-against what the agent does. See ASSUMPTIONS R16.
+against what the agent does. Severity is medium, or high when the same app has no owner (APL-004
+applies): nobody is accountable for that grant. See ASSUMPTIONS R16.
 
 A permission whose name could not be resolved might be high-risk, so it is a visible skip.
 """
@@ -18,6 +19,11 @@ RULE_ID = "APL-006"
 _UNRESOLVED = ("unresolved-app-role-", "unknown-resource-")
 
 
+def _ownerless(app: EntraApp) -> bool:
+    """Exactly APL-004's condition: owners not collected (None) is unknown, not ownerless."""
+    return app.owner_ids == []
+
+
 def _finding(server: str, app: EntraApp, entry: HighRisk, origin: str) -> Finding:
     held_as_role = entry.name in app.application_permissions
     pointer = (
@@ -26,10 +32,12 @@ def _finding(server: str, app: EntraApp, entry: HighRisk, origin: str) -> Findin
         else "/oauth2PermissionGrants"
     )
     form = "application" if held_as_role else "delegated"
+    ownerless = _ownerless(app)
+    why = "grant read directly from Graph; no reason in agent.yaml justifications"
     return make_finding(
         RULE_ID,
         "High-risk permission granted with no justification",
-        Severity.HIGH,
+        Severity.HIGH if ownerless else Severity.MEDIUM,
         f"{server}/{entry.name}",
         granted=[f"{entry.name} ({form})"],
         required=["a justifications entry in agent.yaml"],
@@ -45,7 +53,7 @@ def _finding(server: str, app: EntraApp, entry: HighRisk, origin: str) -> Findin
             f"need it, or add '{entry.name}: <reason>' under justifications in agent.yaml."
         ),
         confidence=0.95,
-        confidence_reason="grant read directly from Graph; no reason in agent.yaml justifications",
+        confidence_reason=f"{why}; app has no owner (APL-004)" if ownerless else why,
         mappings=[NHI5, ASI03],
     )
 
@@ -63,7 +71,8 @@ def check(inv: Inventory) -> RuleResult:
         if apps:
             res.ran(RULE_ID, srv.name)
         seen: set[str] = set()
-        for app in apps:
+        # A permission is reported once per server, so an ownerless app must be the one reported.
+        for app in sorted(apps, key=lambda a: not _ownerless(a)):
             res.skips.extend(
                 skip(RULE_ID, f"{srv.name}/{scope}", "permission name (unresolved in Graph)")
                 for scope in app.granted_scopes()

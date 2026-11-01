@@ -23,13 +23,13 @@ def agent(**justifications):
     return AgentSpec(name="bot", purpose="p", justifications=table)
 
 
-def linked(spec, **grants):
+def linked(spec, owner_ids=("u1",), **grants):
     app = EntraApp(
         app_id=APP_ID,
         display_name="agent",
         application_object_id="obj1",
         service_principal_id="sp1",
-        owner_ids=["u1"],
+        owner_ids=None if owner_ids is None else list(owner_ids),
         **grants,
     )
     c = cred(kind=CredentialKind.SERVICE_PRINCIPAL, entra_app_id=APP_ID)
@@ -42,13 +42,38 @@ def linked(spec, **grants):
 def test_positive_no_justification():
     (f,) = check(linked(agent(), application_permissions=["Mail.Send"])).findings
     assert f.rule_id == "APL-006" and f.status == "violation"
-    assert f.severity is Severity.HIGH and f.subject == "mail/Mail.Send"
+    assert f.severity is Severity.MEDIUM and f.subject == "mail/Mail.Send"
     assert f.granted == ["Mail.Send (application)"]
     assert f.confidence == 0.95 and "agent.yaml" in f.confidence_reason
     assert f.evidence[0].pointer == "/servicePrincipals/sp1/appRoleAssignments"
     assert "permissions-reference#mailsend" in f.evidence[0].note
     assert {m.id for m in f.suggested_mappings} == {"NHI5:2025", "ASI03"}
     assert all(m.label == "suggested mapping" for m in f.suggested_mappings)
+
+
+def test_no_owner_raises_severity_to_high():
+    (f,) = check(linked(agent(), [], application_permissions=["Mail.Send"])).findings
+    assert f.severity is Severity.HIGH and "no owner (APL-004)" in f.confidence_reason
+
+
+def test_owner_data_not_collected_stays_medium():
+    (f,) = check(linked(agent(), None, application_permissions=["Mail.Send"])).findings
+    assert f.severity is Severity.MEDIUM and "APL-004" not in f.confidence_reason
+
+
+def test_justified_permission_on_an_ownerless_app_does_not_fire():
+    inv = linked(agent(Mail_Send="digest"), [], application_permissions=["Mail.Send"])
+    assert check(inv).findings == []
+
+
+@pytest.mark.parametrize("ownerless_first", [True, False])
+def test_ownerless_app_decides_severity_whatever_the_app_order(ownerless_first):
+    inv = linked(agent(), application_permissions=["Mail.Send"])
+    owned = inv.servers[0].entra_apps[0]
+    ownerless = owned.model_copy(update={"app_id": "other", "owner_ids": []})
+    inv.servers[0].entra_apps = [ownerless, owned] if ownerless_first else [owned, ownerless]
+    (f,) = check(inv).findings
+    assert f.severity is Severity.HIGH and "other" in f.evidence[0].note
 
 
 def test_positive_delegated_grant():
@@ -194,6 +219,7 @@ def test_end_to_end_only_the_unjustified_permission_fires(scan):
     """mail holds Mail.ReadWrite, justified in the fixture; mailer holds Mail.Send, not."""
     found = [f for f in scan.result.findings if f.rule_id == "APL-006"]
     assert [f.subject for f in found] == ["mailer/Mail.Send"]
+    assert found[0].severity is Severity.HIGH  # ownerless-mailer also fires APL-004
     assert found[0].evidence[0].source == "entra-mock"
     assert found[0].id in render(scan, "md")
 

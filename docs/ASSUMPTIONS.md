@@ -549,9 +549,11 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0 ,
   https://learn.microsoft.com/en-us/entra/architecture/service-accounts-managed-identities
 - **R16 [HEURISTIC] APL-006.** A high-risk grant (R14) on a linked app needs an entry in a new
-  optional agent.yaml mapping, `justifications: {permission: reason}`. Severity high: the brief set
-  none, and the list holds only permissions the reference warns about or that reach a whole tenant.
-  Confidence 0.95. The mapping is per agent, not per server, and matches names case-insensitively.
+  optional agent.yaml mapping, `justifications: {permission: reason}`. Severity medium, or high
+  when the same app has no owner (`owner_ids == []`, exactly APL-004's condition, including its
+  review case): nobody is accountable for that grant. Owners not collected stays medium. Reported
+  once per server; if several apps hold the permission, an ownerless one decides. Confidence 0.95.
+  The mapping is per agent, not per server, and matches names case-insensitively.
   A blank reason counts as none. A reason is not judged, so "because" passes. Without agent.yaml the
   rule is skipped, as justifications could not exist. An unresolved app role (G5) might be high-risk,
   so it is skipped by name, not passed. G10 applies: delegated grants count though a given token may
