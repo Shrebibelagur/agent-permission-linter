@@ -17,7 +17,7 @@ from apl.models import (
     Severity,
     Tool,
 )
-from apl.redact import redact
+from apl.redact import mask_id, redact
 
 MAX_SUBJECT = 200  # subjects can embed tool names, which are untrusted server output
 
@@ -85,7 +85,8 @@ def kind_confidence(kind_source: str) -> tuple[float, str]:
 
 def app_label(app: EntraApp) -> str:
     """Display names are tenant-controlled and not unique, so the app id stays in the subject."""
-    return f"{_r(app.display_name)[:60]} ({app.app_id})" if app.display_name else app.app_id
+    masked = mask_id(app.app_id)
+    return f"{_r(app.display_name)[:60]} ({masked})" if app.display_name else masked
 
 
 def entra_targets(

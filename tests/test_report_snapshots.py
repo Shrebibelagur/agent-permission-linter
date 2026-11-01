@@ -6,10 +6,12 @@ then review the diff of tests/snapshots/*.md before committing.
 
 import os
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 
 import pytest
 
+from apl.collectors.entra import collect_mock
 from apl.report.markdown import render_markdown
 from apl.scan import run_scan
 
@@ -24,6 +26,7 @@ CASES = {
         F / "agents/release_notes_bot.yaml",
         [F / "tools/claude_desktop_tools.json"],
     ),
+    "entra": ([F / "entra/mcp.json"], F / "entra/agent.yaml", [F / "entra/tools.json"]),
 }
 
 
@@ -31,8 +34,8 @@ CASES = {
 def test_markdown_snapshot(name, monkeypatch):
     monkeypatch.chdir(ROOT)
     configs, agent, tools = CASES[name]
-    report = run_scan(configs, agent, tools)
-    report.inventory.generated_at = FIXED_TIME
+    entra = partial(collect_mock, F / "graph") if name == "entra" else None
+    report = run_scan(configs, agent, tools, entra=entra, now=FIXED_TIME)
     actual = render_markdown(report)
     path = SNAPSHOTS / f"{name}.md"
     if os.environ.get("APL_UPDATE_SNAPSHOTS") == "1":

@@ -71,7 +71,7 @@ def test_correctly_scoped_calendar_app(report):
 def test_app_with_no_owner_is_a_finding_not_a_warning(report):
     [f] = findings_for(report, "files")  # its scope itself is fine, so APL-001 adds nothing
     assert f.rule_id == "APL-004" and f.severity is Severity.MEDIUM and f.status == "violation"
-    assert f.subject == "files/orphan-files (a3a3a3a3-0000-4000-8000-000000000003)"
+    assert f.subject == "files/orphan-files (a3a3...0003)"
     assert f.evidence[0].source == "entra-mock"
     assert apl001_ran(report, "files")
     assert not [w for w in report.inventory.warnings if "no owner" in w]

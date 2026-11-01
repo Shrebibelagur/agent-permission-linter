@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from apl import __version__
-from apl.redact import redact
+from apl.redact import mask_ids, redact
 from apl.report.common import collect_limits, display_path, summary_counts
 from apl.scan import ScanReport
 
@@ -112,4 +112,4 @@ def render_markdown(report: ScanReport) -> str:
     out += ["", "**Always true for this version**", ""]
     out += [f"- {_esc(s)}" for s in limits.standing]
     out.append("")
-    return redact("\n".join(out))
+    return mask_ids(redact("\n".join(out)))

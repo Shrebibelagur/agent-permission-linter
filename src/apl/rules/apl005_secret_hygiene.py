@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from apl.models import CredentialExpiry, EntraApp, Evidence, Inventory, RuleResult, Severity
+from apl.redact import mask_id
 from apl.rules.base import ENTRA_ORIGIN, NHI7, app_label, entra_targets, make_finding, skip
 
 RULE_ID = "APL-005"
@@ -53,7 +54,8 @@ def _check_credential(
     now: datetime,
     origin: str,
 ) -> None:
-    subject = f"{server}/{app_label(app)}/{c.kind}-{c.key_id or index}"
+    key = mask_id(c.key_id) if c.key_id else index
+    subject = f"{server}/{app_label(app)}/{c.kind}-{key}"
     if c.end_unreadable:
         res.skips.append(skip(RULE_ID, subject, "credential end date (not a date in Graph)"))
         return

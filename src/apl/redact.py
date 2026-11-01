@@ -21,6 +21,10 @@ _PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-.=]{8,}"),
 ]
 
+_GUID = re.compile(r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b")
+
+_MIN_MASKED = 12  # a shorter value would be mostly shown anyway; Graph ids are 36-char GUIDs
+
 _known_secrets: set[str] = set()
 _MIN_KNOWN_SECRET = 8  # a shorter value would scrub ordinary text; Entra secrets are 16+ chars
 
@@ -36,6 +40,16 @@ _ENV_REF = re.compile(
     r"|\$\{(?P<kind>env:|input:)?(?P<n1>[A-Za-z0-9_.\-]+)(?::-(?P<default>[^}]*))?\}"
     r"|\$(?P<n2>[A-Za-z_][A-Za-z0-9_]*))$"
 )
+
+
+def mask_id(guid: str) -> str:
+    """`a1a1...0001`: enough to tell ids apart in a report, not enough to look one up."""
+    return f"{guid[:4]}...{guid[-4:]}" if len(guid) > _MIN_MASKED else guid
+
+
+def mask_ids(text: str) -> str:
+    """Mask every GUID. Report-level only: `redact()` runs on ingest, where ids are join keys."""
+    return _GUID.sub(lambda m: mask_id(m.group()), text)
 
 
 def looks_like_secret(value: str) -> bool:

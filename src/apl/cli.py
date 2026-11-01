@@ -12,7 +12,7 @@ import typer
 from apl.collectors.entra import ENV_VARS, EntraError, collect_live, collect_mock
 from apl.inventory import build_inventory
 from apl.parsers.mcp_config import ConfigParseError
-from apl.redact import redact
+from apl.redact import mask_ids, redact
 
 # show_locals stays off: a crash must never print a local holding a credential.
 app = typer.Typer(
@@ -126,10 +126,10 @@ def scan(
     try:
         report = run_scan(config, agent, tools, entra=collector)
     except (ConfigParseError, EntraError) as e:
-        typer.secho(f"error: {redact(str(e))}", fg="red", err=True)
+        typer.secho(f"error: {mask_ids(redact(str(e)))}", fg="red", err=True)
         raise typer.Exit(2) from None
     for w in report.inventory.warnings:
-        typer.secho(f"warning: {redact(w)}", fg="yellow", err=True)
+        typer.secho(f"warning: {mask_ids(redact(w))}", fg="yellow", err=True)
     text = render(report, fmt)
     if out is None:
         typer.echo(text)
