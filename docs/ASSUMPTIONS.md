@@ -638,9 +638,8 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   credential display names are not collected, so none can print.
 
   **Finding titles and permission names still print**, by design: they are what makes a report
-  useful, and titles are fixed text. So do tool names, capabilities, severities, rule ids, file paths
-  from the command line and evidence dates. A permission like `Mail.ReadWrite` says what an agent can
-  do, not whose it is, but custom API scopes (`Ledger.Read`) can give an organisation away.
+  useful, and titles are fixed text. The README flag table lists what still prints, and must match
+  the list below.
 
   **How names are found.** Exact whole names: server `mail` is not in `Mail.ReadWrite`, `mail-triage`
   or `send_mail`. Server names are case-sensitive, as they are often plain words; display names are
@@ -653,12 +652,26 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   holding `[REDACTED]` is left as it is, so no secret value is ever hashed and the removal stays
   visible.
 
-  **Limits.** Not printed as a name but still identifying: `purpose` and `justification` text quoted from agent.yaml when it does not contain the name
-  exactly, and tool names. A name embedded in a longer word or tool name stays: `payroll_search` for server
-  `payroll`. A server named after a common word (`files`) also replaces that word wherever it stands
-  alone, such as in fix text: this errs towards hiding and only hurts readability. Fixed wording that
-  describes an app, such as an owner email, is not touched. Pseudonyms stop casual reading, not
-  someone who can guess a name and holds the salt.
+  **Limits: what still prints.**
+  - **Finding titles and permission names.** Graph names like `Mail.ReadWrite` say what an agent can
+    do, not whose it is. **Custom permission names can name you:** `Contoso.Frobnicate`, or the
+    `Ledger.Read` part of `<resource>/Ledger.Read`, print in full even when the resource name is
+    replaced.
+  - **Tool names, including any that contain a server name:** a name embedded in a longer word stays,
+    so `payroll_search` still shows for server `payroll`. Tool names are server output, and rules
+    and fix text refer to them.
+  - **Environment variable and header names** (`AZURE_CLIENT_ID`, `CONTOSO_API_KEY`), in subjects, fix
+    text and evidence.
+  - **`justification` text from agent.yaml**, which APL-007 quotes in its fix text.
+  - **File paths** of configs given on the command line, in evidence.
+  - Capabilities, severities, rule ids and evidence dates.
+  - **`apl inventory` only:** the agent's `purpose`, `owner` (an email address), `data_classification`
+    and `justifications`, plus `env_keys`, `required_tools` and `required_graph_permissions`.
+
+  Other limits. A server named after a common word (`files`) also replaces that word wherever it
+  stands alone, such as in fix text: this errs towards hiding and only hurts readability. Quoted text
+  is masked only where it holds a registered name exactly. `arg-name-...` hides each arg, not how many
+  there are. Pseudonyms stop casual reading, not someone who can guess a name and holds the salt.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:
