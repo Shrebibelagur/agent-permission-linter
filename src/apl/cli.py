@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import StrEnum
 from functools import partial
 from pathlib import Path
@@ -47,6 +49,32 @@ class FailOn(StrEnum):
     high = "high"
 
 
+class UnexpectedError(RuntimeError):
+    """A crash, with its message scrubbed and the original exception and frames dropped."""
+
+
+def _clean(text: str) -> str:
+    try:
+        return scrub(text)
+    except SaltError:  # no salt means no pseudonyms, so nothing unscrubbed may be shown
+        return "message withheld: no identifier salt available"
+
+
+def _say(text: str, fg: str = "yellow") -> None:
+    typer.secho(_clean(text), fg=fg, err=True)
+
+
+@contextmanager
+def _scrubbed() -> Iterator[None]:
+    """Nothing raised in here leaves with an unscrubbed message or traceback."""
+    try:
+        yield
+    except (typer.Exit, typer.Abort):
+        raise
+    except Exception as e:
+        raise UnexpectedError(f"{type(e).__name__}: {_clean(str(e))}") from None
+
+
 @app.callback()
 def _root() -> None:
     """Agent Permission Linter."""
@@ -65,16 +93,18 @@ def inventory(
 ) -> None:
     """Parse configs offline and print the redacted inventory as JSON."""
     if connect:
-        typer.secho(_CONNECT_WARNING, fg="yellow", err=True)
+        _say(_CONNECT_WARNING)
         raise typer.Exit(2)
-    try:
-        inv = build_inventory(config, agent, tools)
-    except ConfigParseError as e:
-        typer.secho(f"error: {e}", fg="red", err=True)
-        raise typer.Exit(1) from None
-    for w in inv.warnings:
-        typer.secho(f"warning: {w}", fg="yellow", err=True)
-    typer.echo(inv.model_dump_json(indent=2, exclude_none=True))
+    with _scrubbed():
+        try:
+            inv = build_inventory(config, agent, tools)
+            text = scrub(inv.model_dump_json(indent=2, exclude_none=True))
+        except (ConfigParseError, SaltError) as e:
+            _say(f"error: {e}", "red")
+            raise typer.Exit(1) from None
+        for w in inv.warnings:
+            _say(f"warning: {w}")
+        typer.echo(text)
 
 
 def render(report, fmt: Format) -> str:
@@ -110,37 +140,42 @@ def scan(
     ] = None,
 ) -> None:
     """Inventory + rules, then a report. Exit 0 ok, 1 findings at/above --fail-on, 2 error."""
+    with _scrubbed():
+        _run_scan(config, agent, tools, fmt, out, fail_on, connect, entra, entra_mock)
+
+
+def _run_scan(config, agent, tools, fmt, out, fail_on, connect, entra, entra_mock) -> None:
     from apl.scan import exceeds_threshold, run_scan
 
     if connect:
-        typer.secho(_CONNECT_WARNING, fg="yellow", err=True)
+        _say(_CONNECT_WARNING)
         raise typer.Exit(2)
     if entra and entra_mock is not None:
-        typer.secho("error: use --entra or --entra-mock, not both", fg="red", err=True)
+        _say("error: use --entra or --entra-mock, not both", "red")
         raise typer.Exit(2)
     collector = None
     if entra:
-        typer.secho(_ENTRA_NOTICE, fg="yellow", err=True)
+        _say(_ENTRA_NOTICE)
         collector = collect_live
     elif entra_mock is not None:
         collector = partial(collect_mock, entra_mock)
     try:
         report = run_scan(config, agent, tools, entra=collector)
+        text = render(report, fmt)
     except (ConfigParseError, EntraError, SaltError) as e:
-        typer.secho(f"error: {scrub(str(e))}", fg="red", err=True)
+        _say(f"error: {e}", "red")
         raise typer.Exit(2) from None
     for w in report.inventory.warnings:
-        typer.secho(f"warning: {scrub(w)}", fg="yellow", err=True)
-    text = render(report, fmt)
+        _say(f"warning: {w}")
     if out is None:
         typer.echo(text)
     else:
         try:
             out.write_text(text, encoding="utf-8")
         except OSError as e:
-            typer.secho(f"error: cannot write {out}: {e.strerror}", fg="red", err=True)
+            _say(f"error: cannot write {out}: {e.strerror}", "red")
             raise typer.Exit(2) from None
-        typer.secho(f"report written to {out}", err=True)
+        _say(f"report written to {out}")
     if exceeds_threshold(report, fail_on.value):
         raise typer.Exit(1)
 

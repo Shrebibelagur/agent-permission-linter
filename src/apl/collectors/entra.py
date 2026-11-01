@@ -23,7 +23,9 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from apl import idmask
 from apl.models import CredentialExpiry, EntraApp
-from apl.redact import redact, remember_secret
+from apl.redact import install_log_scrub, redact, remember_secret, scrub
+
+install_log_scrub()  # httpx logs full URLs: the token endpoint holds the tenant id
 
 GRAPH_HOST = "graph.microsoft.com"
 GRAPH_BASE = f"https://{GRAPH_HOST}/v1.0"
@@ -49,7 +51,11 @@ _DATE = TypeAdapter(datetime)
 
 
 class EntraError(RuntimeError):
-    """A collector failure. Messages hold status codes and paths, never bodies or credentials."""
+    """A collector failure. Messages hold status codes and paths, never bodies or credentials.
+    Scrubbed here, so paths with object ids are safe wherever the exception ends up."""
+
+    def __init__(self, message: str = "") -> None:
+        super().__init__(scrub(message))
 
 
 class GraphUnreadable(EntraError):
@@ -156,7 +162,7 @@ class ClientCredentialsToken:
             with httpx.Client(transport=self._transport, timeout=TIMEOUT) as http:
                 resp = http.post(url, data=form)
             body = resp.json()
-        except (httpx.HTTPError, ValueError) as e:
+        except (httpx.HTTPError, httpx.InvalidURL, ValueError) as e:
             raise EntraError(f"token request failed: {type(e).__name__}") from None
         if resp.status_code != 200 or not isinstance(body, dict):
             raise EntraError(_token_failure(resp.status_code, body))
@@ -209,7 +215,10 @@ class GraphClient:
 
     def get(self, url: str) -> dict[str, Any]:
         """One page, retrying 429 and 5xx. Bodies of failed responses are never read."""
-        path = httpx.URL(url).path
+        try:
+            path = httpx.URL(url).path
+        except httpx.InvalidURL:  # its message holds the URL
+            raise EntraError("Graph returned an invalid URL") from None
         for attempt in range(MAX_ATTEMPTS):
             headers = {"Authorization": f"Bearer {self._token()}"}
             try:

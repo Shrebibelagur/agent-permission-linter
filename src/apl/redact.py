@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import re
+import traceback
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -94,6 +96,35 @@ def redact(value: str) -> str:
 def scrub(text: str) -> str:
     """Last step before anything leaves the process: secrets, then identifiers."""
     return mask(redact(text))
+
+
+def install_log_scrub() -> None:
+    """Scrub every log record as it is made, whichever logger or handler it reaches. Handler
+    filters would miss a handler the host application adds; this cannot."""
+    current = logging.getLogRecordFactory()
+    if getattr(current, "apl_scrub", False):
+        return
+
+    def factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
+        record = current(*args, **kwargs)
+        try:
+            record.msg, record.args = scrub(record.getMessage()), None
+            if isinstance(record.exc_info, tuple):
+                record.exc_text = scrub("".join(traceback.format_exception(*record.exc_info)))
+                record.exc_info = None
+            if record.stack_info:
+                record.stack_info = scrub(record.stack_info)
+        except Exception:  # a record we cannot scrub is not emitted as it stands
+            record.msg, record.args, record.exc_info, record.stack_info = (
+                "(log record withheld: could not be scrubbed)",
+                None,
+                None,
+                None,
+            )
+        return record
+
+    factory.apl_scrub = True  # type: ignore[attr-defined]
+    logging.setLogRecordFactory(factory)
 
 
 def redact_obj(obj: Any) -> Any:
