@@ -648,10 +648,13 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   no longer match the original. Finding ids are computed from the unmasked subject, so this flag
   does not change them. It is independent of `--show-ids`.
 
-  **Limits.** Not printed as a name but still identifying: the agent name in the report header,
-  `purpose` and `justification` text quoted from agent.yaml when it does not contain the name
-  exactly, tool names, and in `apl inventory` the `command`, `args` and `url` of a server
-  (`payroll-mcp`). A name embedded in a longer word or tool name stays: `payroll_search` for server
+  The agent name is replaced too (`agent-name-...`). In `apl inventory`, `command`, `args` and `url`
+  become `command-name-...`, `arg-name-...` and `url-name-...`, by field, each arg on its own. An arg
+  holding `[REDACTED]` is left as it is, so no secret value is ever hashed and the removal stays
+  visible.
+
+  **Limits.** Not printed as a name but still identifying: `purpose` and `justification` text quoted from agent.yaml when it does not contain the name
+  exactly, and tool names. A name embedded in a longer word or tool name stays: `payroll_search` for server
   `payroll`. A server named after a common word (`files`) also replaces that word wherever it stands
   alone, such as in fix text: this errs towards hiding and only hurts readability. Fixed wording that
   describes an app, such as an owner email, is not touched. Pseudonyms stop casual reading, not

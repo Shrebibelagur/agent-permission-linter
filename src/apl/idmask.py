@@ -19,7 +19,10 @@ import secrets
 from pathlib import Path
 from typing import Any
 
-NAME_KINDS = frozenset({"app-name", "sp-name", "cred-name", "server-name"})
+NAME_KINDS = frozenset(
+    {"app-name", "sp-name", "cred-name", "server-name", "agent-name"}
+    | {"command-name", "arg-name", "url-name"}
+)
 KINDS = frozenset({"app", "tenant", "sp", "cred", "id"}) | NAME_KINDS  # "id": unknown GUID
 SALT_ENV = "APL_ID_SALT"
 MIN_SALT = 16
@@ -162,6 +165,10 @@ def _compile_names() -> re.Pattern[str]:
     # Whole names only: server "mail" is not in Mail.ReadWrite, mail-triage or send_mail, though
     # it is at the end of a sentence.
     return re.compile(rf"(?<![\w-])(?<!\w\.)(?:{'|'.join(parts)})(?![\w-]|\.\w)")
+
+
+def anonymising_names() -> bool:
+    return _anonymise_names
 
 
 def mask_names(text: str) -> str:

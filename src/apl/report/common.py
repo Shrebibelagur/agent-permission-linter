@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from apl import idmask
 from apl.models import Evidence, Inventory, Severity
+from apl.redact import REDACTED
 from apl.rules.base import is_uncertain
 from apl.scan import SEVERITY_ORDER, ScanReport
 
@@ -57,10 +58,33 @@ def anonymised(inv: Inventory) -> Inventory:
     name (`R&amp;D`) no longer matches. Findings and skips are masked when they are made."""
     copy = inv.model_copy(deep=True)
     copy.warnings = [idmask.mask_names(w) for w in copy.warnings]
+    if copy.agent:
+        copy.agent.name = idmask.mask_names(copy.agent.name)
     for srv in copy.servers:
         srv.name = idmask.mask_names(srv.name)
         srv.evidence = _masked_evidence(srv.evidence)
     return copy
+
+
+def _pseudonymous_arg(arg: str) -> str:
+    """A redacted arg is left alone: it holds no secret, and says one was removed. Hashing one
+    that still held a value would break the rule that secrets are never hashed."""
+    return arg if REDACTED in arg else idmask.pseudonym("arg-name", arg)
+
+
+def inventory_data(inv: Inventory) -> dict:
+    """The JSON-like inventory for `apl inventory`. Commands, args and urls go by field, not by
+    registered name: registering `npx` would replace that word everywhere."""
+    data = inv.model_dump(mode="json", exclude_none=True)
+    if not idmask.anonymising_names():
+        return data
+    for srv in data["servers"]:
+        if "command" in srv:
+            srv["command"] = idmask.pseudonym("command-name", srv["command"])
+        if "url" in srv:
+            srv["url"] = idmask.pseudonym("url-name", srv["url"])
+        srv["args"] = [_pseudonymous_arg(a) for a in srv.get("args", [])]
+    return idmask.mask_names_obj(data)
 
 
 def display_path(s: str) -> str:

@@ -58,4 +58,6 @@ def build_inventory(
 
     for name in [s.name for s in servers] + [p.server for p in (spec.servers if spec else [])]:
         idmask.register_name("server-name", name)
+    if spec:
+        idmask.register_name("agent-name", spec.name)
     return Inventory(agent=spec, servers=servers, generated_at=datetime.now(UTC), warnings=warnings)

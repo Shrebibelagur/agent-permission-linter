@@ -1,0 +1,124 @@
+"""--anonymise-names: the agent name in reports, and command, args and url in apl inventory."""
+
+import json
+
+import pytest
+from typer.testing import CliRunner
+
+from apl.cli import app
+from apl.idmask import pseudonym
+from apl.redact import REDACTED
+
+AGENT = 'Payroll & "Finance" Copilot'
+COMMAND = "C:/finance/bin/payroll-mcp.exe"
+ARG = "--ledger=fabrikam-prod"
+URL = "https://ledger.fabrikam.example/mcp"
+SECRET = "ghp_FAKEfakeFAKEfakeFAKEfakeFAKEfake0000"  # noqa: S105
+PLANTS = [AGENT, "Payroll", "Finance", COMMAND, "payroll-mcp", ARG, "fabrikam", URL]
+FORMATS = ["md", "json", "sarif"]
+
+
+def assert_clean(**surfaces):
+    assert surfaces
+    for surface, text in surfaces.items():
+        for value in [*PLANTS, SECRET, json.dumps(AGENT)[1:-1]]:
+            assert value not in text, f"{value!r} leaked in {surface}"
+
+
+@pytest.fixture
+def world(tmp_path):
+    config = tmp_path / "mcp.json"
+    servers = {
+        "local": {"command": COMMAND, "args": [ARG, "-y", "--token", SECRET]},
+        "remote": {"type": "http", "url": URL},
+    }
+    config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
+    agent = tmp_path / "agent.yaml"
+    agent.write_text(f"name: {json.dumps(AGENT)}\npurpose: p\n", encoding="utf-8")
+    return config, agent, tmp_path
+
+
+def run(*args):
+    return CliRunner().invoke(app, [str(a) for a in args])
+
+
+def inventory(world, *flags):
+    config, agent, _ = world
+    r = run("inventory", "-c", config, "-a", agent, *flags)
+    assert r.exit_code == 0, r.output
+    return r, json.loads(r.stdout)
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_agent_name_is_gone_from_reports(world, fmt):
+    config, agent, tmp = world
+    out = tmp / f"r.{fmt}"
+    streamed = run("scan", "-c", config, "-a", agent, "-f", fmt, "--anonymise-names")
+    written = run("scan", "-c", config, "-a", agent, "-f", fmt, "--anonymise-names", "--out", out)
+    assert streamed.exit_code == 0 and written.exit_code == 0, streamed.output
+    assert_clean(
+        stdout=streamed.stdout,
+        stderr=streamed.stderr,
+        written_stderr=written.stderr,
+        out_file=out.read_text(encoding="utf-8"),
+    )
+
+
+def test_header_shows_the_pseudonym(world):
+    config, agent, _ = world
+    r = run("scan", "-c", config, "-a", agent, "--anonymise-names")
+    assert f"- **Agent:** {pseudonym('agent-name', AGENT)}" in r.stdout
+
+
+def test_json_agent_field_shows_the_pseudonym(world):
+    config, agent, _ = world
+    r = run("scan", "-c", config, "-a", agent, "-f", "json", "--anonymise-names")
+    data = json.loads(r.stdout)
+    assert data["agent"]["name"] == pseudonym("agent-name", AGENT)
+
+
+def test_agent_name_prints_without_the_flag(world):
+    config, agent, _ = world
+    assert "Copilot" in run("scan", "-c", config, "-a", agent).stdout
+
+
+def test_inventory_fields_are_pseudonyms(world):
+    r, data = inventory(world, "--anonymise-names")
+    assert_clean(stdout=r.stdout, stderr=r.stderr)
+    local, remote = data["servers"]
+    assert local["command"] == pseudonym("command-name", COMMAND)
+    assert local["args"][0] == pseudonym("arg-name", ARG)
+    assert local["args"][1] == pseudonym("arg-name", "-y")
+    assert remote["url"] == pseudonym("url-name", URL)
+    assert data["agent"]["name"] == pseudonym("agent-name", AGENT)
+
+
+def test_inventory_prints_them_without_the_flag(world):
+    _, data = inventory(world)
+    assert data["servers"][0]["command"] == COMMAND
+    assert data["servers"][1]["url"] == URL
+
+
+def test_redacted_args_stay_visible_and_are_never_hashed(world):
+    r, data = inventory(world, "--anonymise-names")
+    assert REDACTED in data["servers"][0]["args"]
+    assert pseudonym("arg-name", SECRET) not in r.stdout
+
+
+def test_same_value_same_pseudonym_across_runs(world):
+    first, second = inventory(world, "--anonymise-names"), inventory(world, "--anonymise-names")
+    assert first[1]["servers"] == second[1]["servers"]
+
+
+def test_inventory_with_show_ids_still_hides_these(world):
+    r, _ = inventory(world, "--anonymise-names", "--show-ids")
+    assert_clean(stdout=r.stdout)
+
+
+def test_plain_command_word_is_not_replaced_elsewhere(tmp_path):
+    """`npx` goes by field, so the word survives in the rest of the output."""
+    config = tmp_path / "mcp.json"
+    config.write_text(json.dumps({"mcpServers": {"npx": {"command": "npx"}}}), encoding="utf-8")
+    r = run("inventory", "-c", config, "--anonymise-names")
+    assert pseudonym("command-name", "npx") in r.stdout
+    assert pseudonym("server-name", "npx") in r.stdout

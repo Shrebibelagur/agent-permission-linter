@@ -45,8 +45,8 @@ _ENTRA_NOTICE = (
 
 _SHOW_IDS_HELP = "Print real Entra ids (local debugging only). Secrets stay redacted."
 _ANONYMISE_HELP = (
-    "Replace Entra display names and server names with pseudonyms. Finding titles and "
-    "permission names still print."
+    "Replace Entra display names, server and agent names, and inventory commands, args and urls "
+    "with pseudonyms. Finding titles and permission names still print."
 )
 
 
@@ -118,14 +118,15 @@ def inventory(
     ] = False,
 ) -> None:
     """Parse configs offline and print the redacted inventory as JSON."""
+    from apl.report.common import inventory_data
+
     if connect:
         _say(_CONNECT_WARNING)
         raise typer.Exit(2)
     with _scrubbed(show_ids, anonymise_names):
         try:
             inv = build_inventory(config, agent, tools)
-            dumped = idmask.mask_names_obj(inv.model_dump(mode="json", exclude_none=True))
-            text = scrub(json.dumps(dumped, indent=2, ensure_ascii=False))
+            text = scrub(json.dumps(inventory_data(inv), indent=2, ensure_ascii=False))
         except (ConfigParseError, SaltError) as e:
             _say(f"error: {e}", "red")
             raise typer.Exit(1) from None
