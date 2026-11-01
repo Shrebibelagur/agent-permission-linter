@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 NAME_KINDS = frozenset(
-    {"app-name", "sp-name", "cred-name", "server-name", "agent-name"}
+    {"app-name", "sp-name", "cred-name", "server-name", "agent-name", "owner-name"}
     | {"command-name", "arg-name", "url-name"}
 )
 KINDS = frozenset({"app", "tenant", "sp", "cred", "id"}) | NAME_KINDS  # "id": unknown GUID

@@ -60,4 +60,6 @@ def build_inventory(
         idmask.register_name("server-name", name)
     if spec:
         idmask.register_name("agent-name", spec.name)
+        if spec.owner:  # also reaches free text that quotes it, such as a justification
+            idmask.register_name("owner-name", spec.owner)
     return Inventory(agent=spec, servers=servers, generated_at=datetime.now(UTC), warnings=warnings)

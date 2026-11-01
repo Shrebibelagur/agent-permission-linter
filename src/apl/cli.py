@@ -45,7 +45,8 @@ _ENTRA_NOTICE = (
 
 _SHOW_IDS_HELP = "Print real Entra ids (local debugging only). Secrets stay redacted."
 _ANONYMISE_HELP = (
-    "Replace Entra display names, server and agent names, and inventory commands, args and urls "
+    "Replace Entra display names, server, agent and owner names, and inventory commands, args "
+    "and urls "
     "with pseudonyms. Finding titles and permission names still print."
 )
 

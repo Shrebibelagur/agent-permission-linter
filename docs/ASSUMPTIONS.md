@@ -647,7 +647,9 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   no longer match the original. Finding ids are computed from the unmasked subject, so this flag
   does not change them. It is independent of `--show-ids`.
 
-  The agent name is replaced too (`agent-name-...`). In `apl inventory`, `command`, `args` and `url`
+  The agent name is replaced too (`agent-name-...`), and the owner (`owner-name-...`): by field in
+  `apl inventory`, the only place it prints as a field, and wherever free text quotes it exactly,
+  such as a `justification` that APL-007 repeats in its fix. In `apl inventory`, `command`, `args` and `url`
   become `command-name-...`, `arg-name-...` and `url-name-...`, by field, each arg on its own. An arg
   holding `[REDACTED]` is left as it is, so no secret value is ever hashed and the removal stays
   visible.
@@ -665,8 +667,7 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   - **`justification` text from agent.yaml**, which APL-007 quotes in its fix text.
   - **File paths** of configs given on the command line, in evidence.
   - Capabilities, severities, rule ids and evidence dates.
-  - **`apl inventory` only:** the agent's `purpose`, `owner` (an email address), `data_classification`
-    and `justifications`, plus `env_keys`, `required_tools` and `required_graph_permissions`.
+  - **`apl inventory` only:** the agent's `purpose`, `data_classification` and `justifications`, plus `env_keys`, `required_tools` and `required_graph_permissions`.
 
   Other limits. A server named after a common word (`files`) also replaces that word wherever it
   stands alone, such as in fix text: this errs towards hiding and only hurts readability. Quoted text

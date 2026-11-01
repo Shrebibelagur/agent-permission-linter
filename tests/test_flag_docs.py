@@ -13,7 +13,6 @@ STILL_PRINTS = [
     "`justification`",
     "config file paths",
     "`purpose`",
-    "`owner`",
     "`env_keys`",
 ]
 

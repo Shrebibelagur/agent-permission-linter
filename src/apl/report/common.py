@@ -78,6 +78,8 @@ def inventory_data(inv: Inventory) -> dict:
     data = inv.model_dump(mode="json", exclude_none=True)
     if not idmask.anonymising_names():
         return data
+    if "owner" in data.get("agent", {}):
+        data["agent"]["owner"] = idmask.pseudonym("owner-name", data["agent"]["owner"])
     for srv in data["servers"]:
         if "command" in srv:
             srv["command"] = idmask.pseudonym("command-name", srv["command"])
