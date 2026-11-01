@@ -49,7 +49,7 @@ def test_finding_ids_do_not_depend_on_the_flag(fix):
 
 def test_flag_does_not_outlive_the_command(fix):
     scan(fix, "--show-ids")
-    assert idmask.pseudonymise(MAIL_APP) != MAIL_APP
+    assert idmask.mask(MAIL_APP) != MAIL_APP
     assert MAIL_APP not in scan(fix, "-f", "json").stdout
 
 
