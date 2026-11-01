@@ -89,3 +89,15 @@ def test_no_owner_set_is_fine(tmp_path):
     args = ["inventory", "-c", str(config), "-a", str(agent), "--anonymise-names"]
     r = CliRunner().invoke(app, args)
     assert r.exit_code == 0 and "owner" not in json.loads(r.stdout)["agent"]
+
+
+def test_owner_field_is_masked_by_field_not_only_as_a_registered_name(tmp_path):
+    """A value registered first as a server keeps that kind in free text. The field does not
+    depend on that: it is always an owner pseudonym."""
+    config, agent = tmp_path / "mcp.json", tmp_path / "agent.yaml"
+    config.write_text(json.dumps({"mcpServers": {"ops-team": {"command": "c"}}}), encoding="utf-8")
+    agent.write_text("name: a\npurpose: p\nowner: ops-team\n", encoding="utf-8")
+    args = ["inventory", "-c", str(config), "-a", str(agent), "--anonymise-names"]
+    data = json.loads(CliRunner().invoke(app, args).stdout)
+    assert data["agent"]["owner"] == pseudonym("owner-name", "ops-team")
+    assert data["servers"][0]["name"] == pseudonym("server-name", "ops-team")
