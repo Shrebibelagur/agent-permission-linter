@@ -122,6 +122,11 @@ def _replace_known(text: str) -> str:
     return _known_pattern.sub(lambda m: pseudonym(_known[m.group().lower()], m.group()), text)
 
 
+def mask_known(text: str) -> str:
+    """Exact known identifiers only, for redact(): no GUID guessing on data still being joined."""
+    return text if _show_ids else _replace_known(text)
+
+
 def pseudonymise(text: str) -> str:
     """Every identifier in `text`: known values, then Graph paths, then any other GUID."""
     out = _replace_known(text)

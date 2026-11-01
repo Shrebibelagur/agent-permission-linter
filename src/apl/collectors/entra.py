@@ -21,6 +21,7 @@ from urllib.parse import quote
 import httpx
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
+from apl import idmask
 from apl.models import CredentialExpiry, EntraApp
 from apl.redact import redact, remember_secret
 
@@ -75,6 +76,8 @@ class EntraCredentials:
         if not _TENANT.match(tenant):
             raise EntraError("TENANT_ID must be a tenant GUID or domain name")
         remember_secret(env["CLIENT_SECRET"])
+        idmask.register("tenant", tenant)
+        idmask.register("app", env["CLIENT_ID"])
         return cls(tenant, env["CLIENT_ID"], env["CLIENT_SECRET"])
 
 

@@ -6,9 +6,9 @@ import re
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from apl.idmask import mask
+from apl.idmask import mask, mask_known
 
-REDACTED = "***REDACTED***"
+REDACTED = "[REDACTED]"  # secrets are removed outright: never hashed, never a pseudonym
 
 # Known token shapes. Conservative: false positives are fine, leaks are not.
 _PATTERNS: list[re.Pattern[str]] = [
@@ -81,12 +81,14 @@ def remember_secret(value: str) -> None:
 
 
 def redact(value: str) -> str:
+    """Secrets go first and always. Then the exact identifiers we hold (tenant and client id,
+    and any linked object), which get a pseudonym unless --show-ids is on."""
     out = value
     for known in sorted(_known_secrets, key=len, reverse=True):
         out = out.replace(known, REDACTED)
     for p in _PATTERNS:
         out = p.sub(REDACTED, out)
-    return out
+    return mask_known(out)
 
 
 def scrub(text: str) -> str:

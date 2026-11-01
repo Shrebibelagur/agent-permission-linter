@@ -82,10 +82,10 @@ def test_no_full_id_in_any_format(report, fmt):
 
 
 def test_all_planted_ids_are_in_the_evidence_before_rendering(report):
-    """Guards the test above: the ids must reach the findings for masking to mean anything."""
-    raw = json.dumps(report.result.model_dump(mode="json"))
-    assert PLANTED_OBJECT in raw or PLANTED_APP in raw
-    assert any(GUID.search(e.pointer or "") for f in report.result.findings for e in f.evidence)
+    """Guards the test above: the ids must really be collected for masking to mean anything."""
+    apps = [a for s in report.inventory.servers for a in s.entra_apps]
+    assert PLANTED_APP.lower() in {a.app_id for a in apps}
+    assert PLANTED_OBJECT in {a.application_object_id for a in apps}
 
 
 @pytest.mark.parametrize("fmt", sorted(RENDERERS))

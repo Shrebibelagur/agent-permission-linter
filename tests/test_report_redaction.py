@@ -68,7 +68,7 @@ def test_no_secret_in_rendered_report(planted, fmt):
     text = render(_report(planted), fmt)
     for s in SECRETS:
         assert s not in text, f"{s[:6]}... leaked in {fmt}"
-    assert "***REDACTED***" in text
+    assert "[REDACTED]" in text
     if fmt != "md":
         json.loads(text)  # redaction must not break JSON
 

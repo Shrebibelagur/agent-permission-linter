@@ -4,6 +4,7 @@ import pytest
 
 from apl.models import CredentialKind, Transport
 from apl.parsers.mcp_config import ConfigParseError, parse_config_dict, parse_config_file
+from apl.redact import REDACTED
 
 FAKE_SECRETS = [
     "ghp_FAKEfakeFAKEfakeFAKEfakeFAKEfake0000",
@@ -28,7 +29,7 @@ def test_claude_desktop_shape(fix):
 def test_secret_in_argv_flagged_and_redacted(fix):
     servers, _ = parse_config_file(fix / "configs/claude_desktop.json")
     graph = next(s for s in servers if s.name == "graph")
-    assert "***REDACTED***" in graph.args
+    assert REDACTED in graph.args
     assert any(c.inline_secret_detected for c in graph.credentials)
     sp = [c for c in graph.credentials if c.kind is CredentialKind.SERVICE_PRINCIPAL]
     assert sp and sp[0].entra_app_id == "00000000-0000-0000-0000-000000000001"
@@ -46,7 +47,7 @@ def test_vscode_shape_env_and_input_refs_not_inline(fix):
     assert hdr.env_var == "CRM_TOKEN" and hdr.inline_secret_detected is False
     url_cred = next(c for c in crm.credentials if c.evidence.note == "secret in URL")
     assert url_cred.inline_secret_detected
-    assert crm.url == "https://crm.example.com/mcp?***REDACTED***"
+    assert crm.url == f"https://crm.example.com/mcp?{REDACTED}"
     assert by["legacy"].transport is Transport.SSE
     assert any("legacy HTTP+SSE" in w for w in warns)
 
