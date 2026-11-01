@@ -6,6 +6,7 @@ from email.utils import format_datetime
 import httpx
 import pytest
 
+from apl import idmask
 from apl.collectors.entra import (
     GRAPH_APP_ID,
     MAX_ATTEMPTS,
@@ -221,6 +222,18 @@ def test_app_from_another_tenant_has_a_service_principal_only():
     app = collect_entra(client, ["aaaa-client"]).apps["aaaa-client"]
     assert app.application_object_id is None and app.owner_ids == ["u1", "u2"]
     assert "/applications/obj-client/owners" not in calls
+
+
+def test_ids_stay_join_keys_on_a_second_scan_in_one_process():
+    """Registered ids must not be replaced on ingest, or a key id gets pseudonymised twice."""
+    routes = tenant()
+    first = collect_entra(graph(routes)[0], ["aaaa-client"]).apps["aaaa-client"]
+    idmask.register("cred", "k1-long-enough")
+    idmask.register("sp", first.service_principal_id + "-long-enough")
+    routes = tenant()
+    routes["/applications"]["value"][0]["passwordCredentials"][0]["keyId"] = "k1-long-enough"
+    second = collect_entra(graph(routes)[0], ["aaaa-client"]).apps["aaaa-client"]
+    assert second.credentials[0].key_id == "k1-long-enough"
 
 
 def test_display_name_is_redacted_on_ingest():

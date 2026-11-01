@@ -629,6 +629,32 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
     could see an empty file and stop with a `SaltError`; the next run works unless the file stayed
     empty, in which case delete it.
   - Not run against a real tenant. Log coverage was tested with httpx 0.28.1's own logging.
+- **R20 [HEURISTIC] `--anonymise-names`, off by default.** R19 leaves names readable; this flag
+  replaces Entra app and service principal display names (including other APIs' names, printed
+  inside `<resource>/<scope>`) and server names from the config and agent.yaml with
+  `app-name-3f9a1c`, `sp-name-...` and `server-name-...`, in md, json, sarif, `--out`, `apl inventory`,
+  warnings, CLI messages, logs and crash text. Same salt as R19. `cred-name-...` exists, but
+  credential display names are not collected, so none can print.
+
+  **Finding titles and permission names still print**, by design: they are what makes a report
+  useful, and titles are fixed text. So do tool names, capabilities, severities, rule ids, file paths
+  from the command line and evidence dates. A permission like `Mail.ReadWrite` says what an agent can
+  do, not whose it is, but custom API scopes (`Ledger.Read`) can give an organisation away.
+
+  **How names are found.** Exact whole names: server `mail` is not in `Mail.ReadWrite`, `mail-triage`
+  or `send_mail`. Server names are case-sensitive, as they are often plain words; display names are
+  not. Names are replaced before text is cut or escaped, because `R&amp;D` and a 60-character prefix
+  no longer match the original. Finding ids are computed from the unmasked subject, so this flag
+  does not change them. It is independent of `--show-ids`.
+
+  **Limits.** Not printed as a name but still identifying: the agent name in the report header,
+  `purpose` and `justification` text quoted from agent.yaml when it does not contain the name
+  exactly, tool names, and in `apl inventory` the `command`, `args` and `url` of a server
+  (`payroll-mcp`). A name embedded in a longer word or tool name stays: `payroll_search` for server
+  `payroll`. A server named after a common word (`files`) also replaces that word wherever it stands
+  alone, such as in fix text: this errs towards hiding and only hurts readability. Fixed wording that
+  describes an app, such as an owner email, is not touched. Pseudonyms stop casual reading, not
+  someone who can guess a name and holds the salt.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:

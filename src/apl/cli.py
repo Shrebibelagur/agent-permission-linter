@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import StrEnum
@@ -43,6 +44,10 @@ _ENTRA_NOTICE = (
 
 
 _SHOW_IDS_HELP = "Print real Entra ids (local debugging only). Secrets stay redacted."
+_ANONYMISE_HELP = (
+    "Replace Entra display names and server names with pseudonyms. Finding titles and "
+    "permission names still print."
+)
 
 
 class Format(StrEnum):
@@ -74,10 +79,11 @@ def _say(text: str, fg: str = "yellow") -> None:
 
 
 @contextmanager
-def _scrubbed(show_ids: bool = False) -> Iterator[None]:
+def _scrubbed(show_ids: bool = False, anonymise_names: bool = False) -> Iterator[None]:
     """Nothing raised in here leaves with an unscrubbed message or traceback. --show-ids holds
     only for this block, and only ever affects identifiers: see apl.redact.scrub."""
     idmask.set_show_ids(show_ids)
+    idmask.set_anonymise_names(anonymise_names)
     try:
         if show_ids:
             _say(_SHOW_IDS_WARNING)
@@ -88,6 +94,7 @@ def _scrubbed(show_ids: bool = False) -> Iterator[None]:
         raise UnexpectedError(f"{type(e).__name__}: {_clean(str(e))}") from None
     finally:
         idmask.set_show_ids(False)
+        idmask.set_anonymise_names(False)
 
 
 @app.callback()
@@ -106,15 +113,19 @@ def inventory(
         bool, typer.Option("--connect", help="Connect to MCP servers to list tools (NOT in v0.1)")
     ] = False,
     show_ids: Annotated[bool, typer.Option("--show-ids", help=_SHOW_IDS_HELP)] = False,
+    anonymise_names: Annotated[
+        bool, typer.Option("--anonymise-names", help=_ANONYMISE_HELP)
+    ] = False,
 ) -> None:
     """Parse configs offline and print the redacted inventory as JSON."""
     if connect:
         _say(_CONNECT_WARNING)
         raise typer.Exit(2)
-    with _scrubbed(show_ids):
+    with _scrubbed(show_ids, anonymise_names):
         try:
             inv = build_inventory(config, agent, tools)
-            text = scrub(inv.model_dump_json(indent=2, exclude_none=True))
+            dumped = idmask.mask_names_obj(inv.model_dump(mode="json", exclude_none=True))
+            text = scrub(json.dumps(dumped, indent=2, ensure_ascii=False))
         except (ConfigParseError, SaltError) as e:
             _say(f"error: {e}", "red")
             raise typer.Exit(1) from None
@@ -155,9 +166,12 @@ def scan(
         typer.Option("--entra-mock", help="Use saved Graph responses from this directory"),
     ] = None,
     show_ids: Annotated[bool, typer.Option("--show-ids", help=_SHOW_IDS_HELP)] = False,
+    anonymise_names: Annotated[
+        bool, typer.Option("--anonymise-names", help=_ANONYMISE_HELP)
+    ] = False,
 ) -> None:
     """Inventory + rules, then a report. Exit 0 ok, 1 findings at/above --fail-on, 2 error."""
-    with _scrubbed(show_ids):
+    with _scrubbed(show_ids, anonymise_names):
         _run_scan(config, agent, tools, fmt, out, fail_on, connect, entra, entra_mock)
 
 

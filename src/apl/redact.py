@@ -82,15 +82,19 @@ def remember_secret(value: str) -> None:
         _known_secrets.add(value)
 
 
-def redact(value: str) -> str:
-    """Secrets go first and always. Then the exact identifiers we hold (tenant and client id,
-    and any linked object), which get a pseudonym unless --show-ids is on."""
+def remove_secrets(value: str) -> str:
     out = value
     for known in sorted(_known_secrets, key=len, reverse=True):
         out = out.replace(known, REDACTED)
     for p in _PATTERNS:
         out = p.sub(REDACTED, out)
-    return mask_known(out)
+    return out
+
+
+def redact(value: str) -> str:
+    """Secrets go first and always. Then the exact identifiers we hold (tenant and client id,
+    and any linked object), which get a pseudonym unless --show-ids is on."""
+    return mask_known(remove_secrets(value))
 
 
 def scrub(text: str) -> str:

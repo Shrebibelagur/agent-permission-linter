@@ -17,8 +17,10 @@ import os
 import re
 import secrets
 from pathlib import Path
+from typing import Any
 
-KINDS = frozenset({"app", "tenant", "sp", "cred", "id"})  # "id": a GUID of unknown kind
+NAME_KINDS = frozenset({"app-name", "sp-name", "cred-name", "server-name"})
+KINDS = frozenset({"app", "tenant", "sp", "cred", "id"}) | NAME_KINDS  # "id": unknown GUID
 SALT_ENV = "APL_ID_SALT"
 MIN_SALT = 16
 MIN_KNOWN_ID = 8  # a shorter value would scrub ordinary text
@@ -37,6 +39,11 @@ _salt: bytes | None = None
 _known: dict[str, str] = {}  # lower-case value -> kind
 _known_pattern: re.Pattern[str] | None = None
 _show_ids = False
+# Names: value -> (kind, the value that gives the pseudonym). Server names keep their case, as
+# they are often plain words; display names match in any case.
+_names: dict[str, tuple[str, str]] = {}
+_name_pattern: re.Pattern[str] | None = None
+_anonymise_names = False
 
 
 class SaltError(RuntimeError):
@@ -135,9 +142,58 @@ def pseudonymise(text: str) -> str:
     return _GUID.sub(lambda m: pseudonym("id", m.group()), out)
 
 
+def register_name(kind: str, value: str, full: str | None = None) -> None:
+    """A display or server name to replace under --anonymise-names. `full` is the whole name when
+    `value` is a shortened form, so both give the same pseudonym."""
+    global _name_pattern
+    if kind not in NAME_KINDS:
+        raise ValueError(f"unknown name kind: {kind}")
+    key = value if kind == "server-name" else value.lower()
+    if value and key not in _names:
+        _names[key] = (kind, full or value)
+        _name_pattern = None
+
+
+def _compile_names() -> re.Pattern[str]:
+    parts = []
+    for key in sorted(_names, key=len, reverse=True):
+        exact = re.escape(key)
+        parts.append(exact if _names[key][0] == "server-name" else f"(?i:{exact})")
+    # Whole names only: server "mail" is not in Mail.ReadWrite, mail-triage or send_mail, though
+    # it is at the end of a sentence.
+    return re.compile(rf"(?<![\w-])(?<!\w\.)(?:{'|'.join(parts)})(?![\w-]|\.\w)")
+
+
+def mask_names(text: str) -> str:
+    """Names, under --anonymise-names only. Independent of --show-ids."""
+    global _name_pattern
+    if not _anonymise_names or not _names:
+        return text
+    if _name_pattern is None:
+        _name_pattern = _compile_names()
+
+    def replace(m: re.Match[str]) -> str:
+        kind, full = _names.get(m.group()) or _names[m.group().lower()]
+        return pseudonym(kind, full)
+
+    return _name_pattern.sub(replace, text)
+
+
+def mask_names_obj(obj: Any) -> Any:
+    """`mask_names` over a JSON-like structure, keys included."""
+    if isinstance(obj, str):
+        return mask_names(obj)
+    if isinstance(obj, dict):
+        return {mask_names_obj(k): mask_names_obj(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [mask_names_obj(v) for v in obj]
+    return obj
+
+
 def mask(text: str) -> str:
-    """`pseudonymise`, unless --show-ids is on."""
-    return text if _show_ids else pseudonymise(text)
+    """Names first, as a name may hold an id. Then ids, unless --show-ids is on."""
+    named = mask_names(text)
+    return named if _show_ids else pseudonymise(named)
 
 
 def set_show_ids(on: bool) -> None:
@@ -145,8 +201,15 @@ def set_show_ids(on: bool) -> None:
     _show_ids = on
 
 
+def set_anonymise_names(on: bool) -> None:
+    global _anonymise_names
+    _anonymise_names = on
+
+
 def reset() -> None:
     """Forget process state. For tests."""
-    global _salt, _known_pattern, _show_ids
+    global _salt, _known_pattern, _show_ids, _name_pattern, _anonymise_names
     _salt, _known_pattern, _show_ids = None, None, False
+    _name_pattern, _anonymise_names = None, False
     _known.clear()
+    _names.clear()

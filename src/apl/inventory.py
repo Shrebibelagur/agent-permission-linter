@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from apl import idmask
 from apl.classifier import classify_tool
 from apl.models import Inventory
 from apl.parsers.agent_spec import load_agent_spec
@@ -55,4 +56,6 @@ def build_inventory(
             if s.name not in declared:
                 warnings.append(f"{s.name}: in config but has no declared purpose in agent.yaml")
 
+    for name in [s.name for s in servers] + [p.server for p in (spec.servers if spec else [])]:
+        idmask.register_name("server-name", name)
     return Inventory(agent=spec, servers=servers, generated_at=datetime.now(UTC), warnings=warnings)

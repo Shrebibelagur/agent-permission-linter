@@ -19,7 +19,7 @@ from apl.models import (
     Severity,
     Tool,
 )
-from apl.redact import redact
+from apl.redact import redact, remove_secrets
 
 MAX_SUBJECT = 200  # subjects can embed tool names, which are untrusted server output
 
@@ -88,7 +88,11 @@ def kind_confidence(kind_source: str) -> tuple[float, str]:
 def app_label(app: EntraApp | AppRef) -> str:
     """Display names are tenant-controlled and not unique, so the app id stays in the subject."""
     masked = f"({idmask.show('app', app.app_id)})"
-    return f"{_r(app.display_name)[:60]} {masked}" if app.display_name else masked
+    if not app.display_name:
+        return masked
+    name = remove_secrets(app.display_name)
+    idmask.register_name("app-name", name[:60], full=name)  # the cut form must match too
+    return f"{name[:60]} {masked}"
 
 
 def app_subject(server: str, app: EntraApp | AppRef, detail: str = "") -> str:
@@ -130,7 +134,8 @@ def entra_targets(
 
 
 def _r(s: str) -> str:
-    return redact(s)
+    """Names go first: later steps cut and change the text, and then a name would not match."""
+    return redact(idmask.mask_names(s))
 
 
 def _ev(e: Evidence) -> Evidence:
@@ -161,8 +166,8 @@ def make_finding(
         server, _, detail = subject.partition("/")
         subject = app_subject(server, linked, detail.replace("/", " / "))
     subj = _r(subject)[:MAX_SUBJECT]
-    # Pseudonymised in every mode, so --show-ids does not change a finding's id (R19).
-    identity = f"{rule_id}|{idmask.pseudonymise(_r(subject))[:MAX_SUBJECT]}"
+    # The same in every mode, so neither --show-ids nor --anonymise-names changes an id (R19).
+    identity = f"{rule_id}|{idmask.pseudonymise(remove_secrets(subject))[:MAX_SUBJECT]}"
     if linked:  # two apps can sit behind one server and variable name (ASSUMPTIONS R17)
         identity += f"|{idmask.digest(linked.app_id)}"
     digest = hashlib.sha256(identity.encode()).hexdigest()[:12]

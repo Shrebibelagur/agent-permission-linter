@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from apl.models import Severity
+from apl import idmask
+from apl.models import Evidence, Inventory, Severity
 from apl.rules.base import is_uncertain
 from apl.scan import SEVERITY_ORDER, ScanReport
 
@@ -40,6 +41,25 @@ class Limits(BaseModel):
     low_confidence_tools: list[LowConfidenceTool] = Field(default_factory=list)
     parser_warnings: list[str] = Field(default_factory=list)
     standing: list[str] = Field(default_factory=lambda: list(STANDING_LIMITS))
+
+
+def _masked_evidence(e: Evidence) -> Evidence:
+    return Evidence(
+        source=idmask.mask_names(e.source),
+        pointer=idmask.mask_names(e.pointer) if e.pointer else None,
+        note=idmask.mask_names(e.note) if e.note else None,
+    )
+
+
+def anonymised(inv: Inventory) -> Inventory:
+    """Names in the inventory, replaced before rendering: renderers escape text, and an escaped
+    name (`R&amp;D`) no longer matches. Findings and skips are masked when they are made."""
+    copy = inv.model_copy(deep=True)
+    copy.warnings = [idmask.mask_names(w) for w in copy.warnings]
+    for srv in copy.servers:
+        srv.name = idmask.mask_names(srv.name)
+        srv.evidence = _masked_evidence(srv.evidence)
+    return copy
 
 
 def display_path(s: str) -> str:

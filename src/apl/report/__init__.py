@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from apl.report.common import anonymised
 from apl.report.json_report import render_json
 from apl.report.markdown import render_markdown
 from apl.report.sarif import render_sarif
@@ -11,6 +12,7 @@ RENDERERS = {"md": render_markdown, "json": render_json, "sarif": render_sarif}
 
 
 def render(report: ScanReport, fmt: str) -> str:
+    report = report.model_copy(update={"inventory": anonymised(report.inventory)})
     try:
         return RENDERERS[fmt](report)
     except KeyError:

@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from apl import idmask
 from apl.models import CredentialExpiry, EntraApp
-from apl.redact import install_log_scrub, redact, remember_secret, scrub
+from apl.redact import install_log_scrub, redact, remember_secret, remove_secrets, scrub
 
 install_log_scrub()  # httpx logs full URLs: the token endpoint holds the tenant id
 
@@ -276,7 +276,8 @@ class EntraSnapshot(BaseModel):
 
 
 def _text(value: Any) -> str:
-    return redact(str(value))[:MAX_TEXT] if value else ""
+    """Secrets only: ids are join keys here, and are masked on the way out."""
+    return remove_secrets(str(value))[:MAX_TEXT] if value else ""
 
 
 def _key(app_id: Any) -> str:
@@ -328,7 +329,10 @@ def _qualified(resource: dict[str, Any] | None, resource_id: Any, value: str) ->
         return f"unknown-resource-{_text(resource_id)}/{value}"
     if _key(resource.get("appId")) == GRAPH_APP_ID:
         return value
-    return f"{_text(resource.get('displayName')) or _text(resource_id)}/{value}"
+    name = _text(resource.get("displayName"))
+    if name:
+        idmask.register_name("sp-name", name)  # printed inside the permission
+    return f"{name or _text(resource_id)}/{value}"
 
 
 def _app_role_name(assignment: dict[str, Any], sps: dict[str, dict[str, Any]]) -> str:

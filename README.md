@@ -63,6 +63,7 @@ The well-scoped fixture in `tests/fixtures/clean/` produces no findings
 | `--fail-on` | `none` (default), `low`, `medium`, `high` |
 | `--entra-mock DIR` | read saved Graph responses from `DIR` (no network, no credentials) |
 | `--entra` | read Entra live through Graph, GET only. Needs `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET` |
+| `--anonymise-names` | replace Entra display names and server names with pseudonyms. Finding titles and permission names still print |
 
 Exit codes: `0` no finding at or above `--fail-on` · `1` at least one (use in CI) · `2` parse,
 write or Entra error, or `--connect`.

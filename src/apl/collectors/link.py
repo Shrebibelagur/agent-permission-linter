@@ -29,6 +29,7 @@ def linkable_app_ids(inv: Inventory) -> set[str]:
 
 
 def _register_ids(app: EntraApp) -> None:
+    idmask.register_name("app-name", app.display_name)
     idmask.register("app", app.app_id)
     if app.application_object_id:
         idmask.register("app", app.application_object_id)
