@@ -12,8 +12,14 @@ from pathlib import Path
 
 from apl import __version__, idmask
 from apl.models import Finding, Severity
-from apl.redact import redact_obj, scrub
-from apl.report.common import FREE_TEXT_LIMIT, REAL_IDS_WARNING, display_path, outcome
+from apl.redact import redact_obj, scrub, showing_urls
+from apl.report.common import (
+    FREE_TEXT_LIMIT,
+    REAL_IDS_WARNING,
+    REAL_URLS_WARNING,
+    display_path,
+    outcome,
+)
 from apl.scan import ScanReport
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -109,6 +115,9 @@ def build_sarif(report: ScanReport) -> dict:
     if idmask.showing_ids():
         notes.insert(0, {"level": "warning", "message": {"text": REAL_IDS_WARNING}})
         properties["containsRealIds"] = True
+    if showing_urls():
+        notes.insert(0, {"level": "warning", "message": {"text": REAL_URLS_WARNING}})
+        properties["containsRealUrls"] = True
     return {
         "$schema": SARIF_SCHEMA,
         "version": "2.1.0",

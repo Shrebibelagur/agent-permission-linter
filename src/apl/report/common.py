@@ -19,6 +19,7 @@ STANDING_LIMITS = [
     "Granted scopes (APL-001) need Entra data (--entra or --entra-mock); otherwise skipped.",
 ]
 REAL_IDS_WARNING = "WARNING: this report contains real identifiers"
+REAL_URLS_WARNING = "WARNING: this report contains full URLs"
 FREE_TEXT_LIMIT = "Free-text fields (justification text) are not masked: review before sharing."
 ENTRA_LIMITS = {
     "mock": "Entra data came from saved fixtures (--entra-mock), not a real tenant.",

@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from apl import __version__, idmask
-from apl.redact import scrub
-from apl.report.common import REAL_IDS_WARNING, collect_limits, display_path, summary_counts
+from apl.redact import scrub, showing_urls
+from apl.report.common import (
+    REAL_IDS_WARNING,
+    REAL_URLS_WARNING,
+    collect_limits,
+    display_path,
+    summary_counts,
+)
 from apl.scan import ScanReport
 
 
@@ -26,6 +32,8 @@ def render_markdown(report: ScanReport) -> str:
     findings = report.sorted_findings()
     limits = collect_limits(report)
     out: list[str] = [f"**{REAL_IDS_WARNING}**", ""] if idmask.showing_ids() else []
+    if showing_urls():
+        out += [f"**{REAL_URLS_WARNING}**", ""]
     out += ["# Agent Permission Linter report", ""]
     agent = _esc(inv.agent.name) if inv.agent else "none (no agent.yaml given)"
     out += [

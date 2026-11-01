@@ -713,7 +713,9 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   stay removed, as `redact_url` drops them at parse time, and `--anonymise-names` placeholders still
   win. **Limits.** A URL with no scheme (`hooks.example.test/x`) is not recognised. Two servers on
   one host now read the same, so a report cannot tell them apart. A path on a trusted host prints.
-  Unlike `--show-ids`, a report made with `--show-urls` carries no mark of its own.
+  **Marker.** Like `--show-ids`, the report says so itself, to `--out` and stdout alike: a first line
+  in md, a top-level `contains_real_urls: true` in json (absent otherwise), and a warning
+  notification plus `containsRealUrls` in sarif. With both flags, both markers print.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:
@@ -847,7 +849,8 @@ tests use responses shaped from the docs' examples, so live behaviour itself is 
   The schema is not re-validated in CI (no `jsonschema` dependency); tests check structure.
 - **R10 [HEURISTIC] JSON report.** `schema_version: "1.0"`, with top-level keys pinned by a
   test. Bump the major version on removed or renamed keys or changed types; adding keys is minor.
-  `contains_real_ids` is present only under `--show-ids`, so a default report's keys do not change.
+  `contains_real_ids` and `contains_real_urls` are present only under `--show-ids` and `--show-urls`,
+  so a default report's keys do not change.
 - **R12 [HEURISTIC] "Evaluated" wording.** Each rule records a `(rule, subject)` entry in
   `RuleResult.evaluated` once it gets past its skips. A server a rule does not apply to (e.g.
   APL-001 on a server with no credential) is neither evaluated nor skipped. Reports never say

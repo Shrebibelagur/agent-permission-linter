@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 
 from apl import __version__, idmask
-from apl.redact import redact_obj, scrub
+from apl.redact import redact_obj, scrub, showing_urls
 from apl.report.common import collect_limits, display_path, summary_counts
 from apl.scan import ScanReport
 
@@ -57,6 +57,8 @@ def build_json(report: ScanReport) -> dict:
     }
     if idmask.showing_ids():
         data["contains_real_ids"] = True  # absent otherwise; adding a key is minor (R10)
+    if showing_urls():
+        data["contains_real_urls"] = True  # likewise
     return data
 
 

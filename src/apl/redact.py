@@ -143,6 +143,10 @@ def redact(value: str) -> str:
     return mask_known(remove_secrets(value))
 
 
+def showing_urls() -> bool:
+    return _show_urls
+
+
 def set_show_urls(on: bool) -> None:
     global _show_urls
     _show_urls = on
