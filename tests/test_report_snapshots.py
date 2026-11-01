@@ -4,13 +4,16 @@ To update after an intended change: APL_UPDATE_SNAPSHOTS=1 pytest tests/test_rep
 then review the diff of tests/snapshots/*.md before committing.
 """
 
+import json
 import os
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from apl.cli import app
 from apl.collectors.entra import collect_mock
 from apl.report.markdown import render_markdown
 from apl.scan import run_scan
@@ -28,6 +31,20 @@ CASES = {
     ),
     "entra": ([F / "entra/mcp.json"], F / "entra/agent.yaml", [F / "entra/tools.json"]),
 }
+
+
+def test_inventory_snapshot(monkeypatch):
+    """`apl inventory` default output: planted webhook urls and a token in args."""
+    monkeypatch.chdir(ROOT)
+    r = CliRunner().invoke(app, ["inventory", "-c", str(F / "safe_output/mcp.json")])
+    assert r.exit_code == 0, r.output
+    data = json.loads(r.stdout)
+    data.pop("generated_at")
+    actual = json.dumps(data, indent=2).replace(chr(92) * 2, "/") + "\n"
+    path = SNAPSHOTS / "inventory.json"
+    if os.environ.get("APL_UPDATE_SNAPSHOTS") == "1":
+        path.write_text(actual, encoding="utf-8", newline="\n")
+    assert actual == path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
 @pytest.mark.parametrize("name", sorted(CASES))

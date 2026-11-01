@@ -17,7 +17,7 @@ from apl.collectors.entra import ENV_VARS, EntraError, collect_live, collect_moc
 from apl.idmask import SaltError
 from apl.inventory import build_inventory
 from apl.parsers.mcp_config import ConfigParseError
-from apl.redact import scrub
+from apl.redact import scrub, set_show_urls
 
 # show_locals stays off: a crash must never print a local holding a credential.
 app = typer.Typer(
@@ -37,12 +37,18 @@ _SHOW_IDS_WARNING = (
     "For local debugging only: do not share this output. Secrets stay redacted."
 )
 
+_SHOW_URLS_WARNING = (
+    "WARNING: --show-urls prints full URLs, and a URL path can hold a secret. For local debugging "
+    "only: do not share this output. Userinfo and query strings stay removed."
+)
+
 _ENTRA_NOTICE = (
     "NOTICE: --entra reads your tenant through Microsoft Graph. Read-only: GET requests only, "
     "nothing in Entra is changed."
 )
 
 
+_SHOW_URLS_HELP = "Print full URLs (local debugging only). Userinfo and query stay removed."
 _FREE_TEXT_NOTICE = "free-text fields are not masked: review before sharing"
 _SHOW_IDS_HELP = "Print real Entra ids (local debugging only). Secrets stay redacted."
 _ANONYMISE_HELP = (
@@ -81,14 +87,19 @@ def _say(text: str, fg: str = "yellow") -> None:
 
 
 @contextmanager
-def _scrubbed(show_ids: bool = False, anonymise_names: bool = False) -> Iterator[None]:
+def _scrubbed(
+    show_ids: bool = False, anonymise_names: bool = False, show_urls: bool = False
+) -> Iterator[None]:
     """Nothing raised in here leaves with an unscrubbed message or traceback. --show-ids holds
     only for this block, and only ever affects identifiers: see apl.redact.scrub."""
     idmask.set_show_ids(show_ids)
     idmask.set_anonymise_names(anonymise_names)
+    set_show_urls(show_urls)
     try:
         if show_ids:
             _say(_SHOW_IDS_WARNING)
+        if show_urls:
+            _say(_SHOW_URLS_WARNING)
         yield
     except (typer.Exit, typer.Abort):
         raise
@@ -97,6 +108,7 @@ def _scrubbed(show_ids: bool = False, anonymise_names: bool = False) -> Iterator
     finally:
         idmask.set_show_ids(False)
         idmask.set_anonymise_names(False)
+        set_show_urls(False)
 
 
 @app.callback()
@@ -118,6 +130,7 @@ def inventory(
     anonymise_names: Annotated[
         bool, typer.Option("--anonymise-names", help=_ANONYMISE_HELP)
     ] = False,
+    show_urls: Annotated[bool, typer.Option("--show-urls", help=_SHOW_URLS_HELP)] = False,
 ) -> None:
     """Parse configs offline and print the redacted inventory as JSON."""
     from apl.report.common import inventory_data
@@ -125,7 +138,7 @@ def inventory(
     if connect:
         _say(_CONNECT_WARNING)
         raise typer.Exit(2)
-    with _scrubbed(show_ids, anonymise_names):
+    with _scrubbed(show_ids, anonymise_names, show_urls):
         try:
             inv = build_inventory(config, agent, tools)
             text = scrub(json.dumps(inventory_data(inv), indent=2, ensure_ascii=False))
@@ -174,9 +187,10 @@ def scan(
     anonymise_names: Annotated[
         bool, typer.Option("--anonymise-names", help=_ANONYMISE_HELP)
     ] = False,
+    show_urls: Annotated[bool, typer.Option("--show-urls", help=_SHOW_URLS_HELP)] = False,
 ) -> None:
     """Inventory + rules, then a report. Exit 0 ok, 1 findings at/above --fail-on, 2 error."""
-    with _scrubbed(show_ids, anonymise_names):
+    with _scrubbed(show_ids, anonymise_names, show_urls):
         _run_scan(config, agent, tools, fmt, out, fail_on, connect, entra, entra_mock)
 
 

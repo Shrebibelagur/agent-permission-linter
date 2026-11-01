@@ -25,6 +25,22 @@ _PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?i)bearer\s+[A-Za-z0-9_\-.=]{8,}"),
 ]
 
+PATH_REDACTED = "[path-redacted]"
+# Any scheme but file: SARIF artifact uris are local paths the reader already has.
+_URL = re.compile(r"(?i)\b(?!file://)([a-z][a-z0-9+.\-]*)://([^\s\"'`<>|\\)]+)")
+# Exact hosts only. Our own references and $schema, and Graph, whose paths idmask has handled.
+_TRUSTED_URL_HOSTS = frozenset(
+    {
+        "learn.microsoft.com",
+        "owasp.org",
+        "genai.owasp.org",
+        "json.schemastore.org",
+        "graph.microsoft.com",
+        "login.microsoftonline.com",
+    }
+)
+_show_urls = False
+
 _known_secrets: set[str] = set()
 _MIN_KNOWN_SECRET = 8  # a shorter value would scrub ordinary text; Entra secrets are 16+ chars
 
@@ -97,9 +113,29 @@ def redact(value: str) -> str:
     return mask_known(remove_secrets(value))
 
 
+def set_show_urls(on: bool) -> None:
+    global _show_urls
+    _show_urls = on
+
+
+def _short_url(match: re.Match[str]) -> str:
+    scheme, rest = match.group(1), match.group(2)
+    authority = re.split(r"[/?#]", rest, maxsplit=1)[0]
+    host = authority.rsplit("@", 1)[-1]
+    if host.lower() in _TRUSTED_URL_HOSTS and "@" not in authority:
+        return match.group()
+    return f"{scheme}://{host}/{PATH_REDACTED}"
+
+
+def shorten_urls(text: str) -> str:
+    """`scheme://host/[path-redacted]`, wherever a URL stands. A path can be the secret, as in a
+    webhook, and nothing recognises it. Hosts this tool links to itself are left alone."""
+    return text if _show_urls else _URL.sub(_short_url, text)
+
+
 def scrub(text: str) -> str:
-    """Last step before anything leaves the process: secrets, then identifiers."""
-    return mask(redact(text))
+    """Last step before anything leaves the process: secrets, identifiers, then URLs."""
+    return shorten_urls(mask(redact(text)))
 
 
 def install_log_scrub() -> None:

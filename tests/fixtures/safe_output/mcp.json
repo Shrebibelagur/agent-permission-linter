@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "hook": {
+      "type": "http",
+      "url": "https://user:pw@hooks.example.test:8443/services/T0FAKE/B0FAKE/Xy9fAkEsEcReTpAtHsEgMeNt1234?sig=abc"
+    },
+    "local": {
+      "command": "C:/tools/agents/a-long-benign-directory-name/run.exe",
+      "args": [
+        "--region=eu",
+        "mcp-remote",
+        "https://relay.example.test/v1/Xy9fAkEsEcReTpAtHsEgMeNt1234/sse",
+        "--build",
+        "server-1.24.3-alpha.20261101",
+        "--client=qT7vZ2mK9xLw4RbN8sYc3Hd6"
+      ]
+    }
+  }
+}

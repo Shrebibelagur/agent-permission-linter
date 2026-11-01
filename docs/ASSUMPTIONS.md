@@ -653,9 +653,7 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   become placeholders, by field: `[cmd-2]` and `[url-2]` name the second server's, and `[arg-1]`,
   `[arg-2]` restart on each server. They are not pseudonyms because such a value may hold a secret
   nothing recognises, such as the path of a webhook url, and secrets are never hashed. So nothing
-  derived from these values prints, and the same value on two servers cannot be matched. Without
-  the flag `apl inventory` prints such a url path in full: `redact_url` removes only userinfo and
-  query strings. An arg holding `[REDACTED]` is left
+  derived from these values prints, and the same value on two servers cannot be matched. An arg holding `[REDACTED]` is left
   as it is, so the removal stays visible.
 
   **Limits: what still prints.**
@@ -686,6 +684,19 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   stands alone, such as in fix text: this errs towards hiding and only hurts readability. Quoted text
   is masked only where it holds a registered name exactly. Placeholders hide each value, not how many args there are, where a
   redacted one sits or which servers are local. Pseudonyms stop casual reading, not someone who can guess a name and holds the salt.
+- **R21 [HEURISTIC] Default-safe URLs — changed default output, 2026-11-01.** A URL path can be the
+  secret, as in a webhook, and nothing recognises it. So every URL prints as
+  `scheme://host/[path-redacted]`, wherever it stands: the `url` field, an arg (`mcp-remote <url>`),
+  warnings, `justification` text and logs. It is the last step of `scrub()`, so it covers everything
+  R19 does. Port is kept; userinfo goes. Any scheme counts except `file`, as SARIF uris are local
+  paths. Exact hosts are left alone, as this tool links to them or handles their paths: Microsoft
+  Learn, owasp.org, genai.owasp.org, json.schemastore.org, Graph and the token endpoint. A lookalike
+  (`learn.microsoft.com.evil.test`, or one with userinfo) is shortened.
+  `--show-urls` prints full URLs with a stderr warning, for one command. Userinfo and query strings
+  stay removed, as `redact_url` drops them at parse time, and `--anonymise-names` placeholders still
+  win. **Limits.** A URL with no scheme (`hooks.example.test/x`) is not recognised. Two servers on
+  one host now read the same, so a report cannot tell them apart. A path on a trusted host prints.
+  Unlike `--show-ids`, a report made with `--show-urls` carries no mark of its own.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:

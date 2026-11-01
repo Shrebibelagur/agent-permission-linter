@@ -38,8 +38,8 @@ def config(tmp_path):
 
 
 def test_redaction_alone_does_not_catch_this_url(config):
-    """Why placeholders are needed: without the flag the path prints in full."""
-    r = run("inventory", "-c", config)
+    """Why placeholders are needed: recognising secrets does not find this one."""
+    r = run("inventory", "-c", config, "--show-urls")
     assert PATH_SECRET in r.stdout
 
 
@@ -75,6 +75,11 @@ def test_same_value_on_two_servers_cannot_be_matched(tmp_path):
 
 def test_show_ids_does_not_bring_them_back(config):
     r = run("inventory", "-c", config, "--anonymise-names", "--show-ids")
+    assert_clean(stdout=r.stdout)
+
+
+def test_show_urls_does_not_bring_them_back(config):
+    r = run("inventory", "-c", config, "--anonymise-names", "--show-urls")
     assert_clean(stdout=r.stdout)
 
 

@@ -95,7 +95,7 @@ def test_inventory_fields_are_pseudonyms(world):
 def test_inventory_prints_them_without_the_flag(world):
     _, data = inventory(world)
     assert data["servers"][0]["command"] == COMMAND
-    assert data["servers"][1]["url"] == URL
+    assert data["servers"][1]["url"] == "https://ledger.fabrikam.example/[path-redacted]"
 
 
 def test_redacted_args_stay_visible_and_are_never_hashed(world):

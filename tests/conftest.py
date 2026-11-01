@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from apl import idmask
-from apl.redact import _known_secrets
+from apl.redact import _known_secrets, set_show_urls
 
 FIX = Path(__file__).parent / "fixtures"
 TEST_SALT = "fixed-test-salt-not-a-real-one"  # keeps finding ids and snapshots stable
@@ -27,3 +27,4 @@ def forget_known_secrets():
     yield
     _known_secrets.clear()
     idmask.reset()
+    set_show_urls(False)

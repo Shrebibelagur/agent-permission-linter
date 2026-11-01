@@ -1,0 +1,49 @@
+{
+  "servers": [
+    {
+      "name": "hook",
+      "transport": "http",
+      "args": [],
+      "url": "https://hooks.example.test:8443/[path-redacted]",
+      "env_keys": [],
+      "credentials": [],
+      "tools": [],
+      "tools_source": "none",
+      "disabled": false,
+      "source_format": "mcpServers",
+      "format_status": "verified",
+      "evidence": {
+        "source": "tests/fixtures/safe_output/mcp.json",
+        "pointer": "/mcpServers/hook"
+      }
+    },
+    {
+      "name": "local",
+      "transport": "stdio",
+      "command": "C:/tools/agents/a-long-benign-directory-name/run.exe",
+      "args": [
+        "--region=eu",
+        "mcp-remote",
+        "https://relay.example.test/[path-redacted]",
+        "--build",
+        "server-1.24.3-alpha.20261101",
+        "--client=qT7vZ2mK9xLw4RbN8sYc3Hd6"
+      ],
+      "env_keys": [],
+      "credentials": [],
+      "tools": [],
+      "tools_source": "none",
+      "disabled": false,
+      "source_format": "mcpServers",
+      "format_status": "verified",
+      "evidence": {
+        "source": "tests/fixtures/safe_output/mcp.json",
+        "pointer": "/mcpServers/local"
+      }
+    }
+  ],
+  "warnings": [
+    "hook: no tool list (offline); capabilities unknown",
+    "local: no tool list (offline); capabilities unknown"
+  ]
+}
