@@ -63,10 +63,44 @@ The well-scoped fixture in `tests/fixtures/clean/` produces no findings
 | `--fail-on` | `none` (default), `low`, `medium`, `high` |
 | `--entra-mock DIR` | read saved Graph responses from `DIR` (no network, no credentials) |
 | `--entra` | read Entra live through Graph, GET only. Needs `TENANT_ID`, `CLIENT_ID`, `CLIENT_SECRET` |
+| `--show-ids` | print real Entra ids, for local debugging only. Warns on stderr and marks the report. Secrets stay redacted, and finding ids do not change |
 | `--anonymise-names` | replace Entra display names and server names with pseudonyms. Finding titles and permission names still print |
 
 Exit codes: `0` no finding at or above `--fail-on` · `1` at least one (use in CI) · `2` parse,
 write or Entra error, or `--connect`.
+
+### Identifiers and `APL_ID_SALT`
+
+Reports never print a full tenant, client or object id. They print a pseudonym such as
+`app-3f9a1c`: a keyed hash, the same on every run of one install. Secrets are different: they are
+removed as `[REDACTED]` and are never hashed.
+
+The key is a salt, which is what stops someone who has a report from checking a guessed id. It
+comes from the `APL_ID_SALT` environment variable, at least 16 characters. If that is not set, `apl`
+creates a random one on first use and keeps it in a file outside the repo:
+
+| Platform | Salt file |
+|---|---|
+| Windows | `%APPDATA%\apl\id_salt` |
+| Linux, macOS | `$XDG_CONFIG_HOME/apl/id_salt`, by default `~/.config/apl/id_salt` |
+
+- **Never commit it.** Keep the salt out of the repo, `.env.example` and logs. `apl` scrubs it from
+  its own output like a secret.
+- **Set the same value on CI.** Finding ids for Entra apps depend on the salt. Laptops and CI with
+  different salts report different ids for the same finding, so baselines and SARIF deduplication
+  break. Store one value in your CI secret store and export it on every machine that must agree.
+- **Changing or losing it changes those ids** and every pseudonym.
+- No usable salt stops the scan with exit code 2: `apl` does not fall back to printing raw ids.
+
+To make a value:
+
+```
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+`--show-ids` prints the real ids for local debugging. It warns on stderr and the report says so
+itself: a first line in md, `"contains_real_ids": true` in json, and a note in sarif. Do not share
+that output. It never turns off secret redaction.
 
 ### Entra
 
