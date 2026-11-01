@@ -607,6 +607,10 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   copy: 25 failed a test at once. The two that did not exposed a test that could never fail
   (`--show-ids` outliving the command) and a crash where a clean error belonged, unnoticed because a
   second guard held; both are now caught. The harness itself is not in the repo.
+  **Guard count: 89.** Each later change added guards under the same rule, and the count is the
+  number broken one at a time on the final code of R20 to R22 with every one failing a test. New
+  guards that survived a first run showed real test gaps each time, so a passing suite alone was
+  not taken as proof.
 
   **Limits.**
   - **Finding ids now depend on the salt.** Two installs give different ids for the same app, and

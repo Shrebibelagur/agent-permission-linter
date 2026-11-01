@@ -76,6 +76,12 @@ def test_low_entropy_secret_is_a_known_miss():
     assert redact_random_tokens(miss) == miss
 
 
+def test_repeating_pattern_is_not_random():
+    """Changes kind on every step, so only the entropy check stops this one."""
+    pattern = "aB1" * 8
+    assert redact_random_tokens(pattern) == pattern
+
+
 def test_single_case_hex_is_a_known_miss():
     miss = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b"
     assert redact_random_tokens(miss) == miss

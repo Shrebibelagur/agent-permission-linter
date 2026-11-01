@@ -5,8 +5,9 @@ import json
 import pytest
 from typer.testing import CliRunner
 
+from apl import idmask
 from apl.cli import app
-from apl.redact import REDACTED, remember_secret, shorten_urls
+from apl.redact import REDACTED, remember_secret, scrub, shorten_urls
 
 PATH_SECRET = "Xy9fAkEsEcReTpAtHsEgMeNt1234"  # noqa: S105
 HOOK = f"https://hooks.example.test/services/T0FAKE/B0FAKE/{PATH_SECRET}"
@@ -122,6 +123,13 @@ def test_show_urls_never_shows_a_secret(world):
 def test_flag_does_not_outlive_the_command(world):
     inventory(world, "--show-urls")
     assert shorten_urls(HOOK) == SHORT
+
+
+def test_a_name_that_is_a_url_goes_whole_under_anonymise_names():
+    """Names first: a shortened url would no longer match the name, and its host would print."""
+    idmask.set_anonymise_names(True)
+    idmask.register_name("server-name", HOOK)
+    assert scrub(f"see {HOOK}") == f"see {idmask.pseudonym('server-name', HOOK)}"
 
 
 @pytest.mark.parametrize(
