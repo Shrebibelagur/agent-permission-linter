@@ -430,6 +430,9 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   `NHI7:2025 Long-Lived Secrets` covers secrets "with expiration dates that are too far in the future
   or that don't expire at all". Source:
   https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/
+  `NHI5:2025 Overprivileged NHI` warns against privileges "beyond their functional requirements".
+  Source: https://owasp.org/www-project-non-human-identities-top-10/2025/5-overprivileged-nhi/
+  APL-006 also carries ASI03, on the same title-only basis as APL-001 and APL-002.
 - **R2 [HEURISTIC] — Graph naming verified.** Permissions follow
   `{resource}.{operation}.{constraint}`. `ReadWrite` grants "read, create, update, and delete".
   APL-001 maps operations to the capabilities they add over `Read`: Read/ReadBasic → read;
@@ -545,6 +548,14 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   Sources: https://learn.microsoft.com/en-us/graph/api/resources/passwordcredential?view=graph-rest-1.0 ,
   https://learn.microsoft.com/en-us/graph/api/resources/keycredential?view=graph-rest-1.0 ,
   https://learn.microsoft.com/en-us/entra/architecture/service-accounts-managed-identities
+- **R16 [HEURISTIC] APL-006.** A high-risk grant (R14) on a linked app needs an entry in a new
+  optional agent.yaml mapping, `justifications: {permission: reason}`. Severity high: the brief set
+  none, and the list holds only permissions the reference warns about or that reach a whole tenant.
+  Confidence 0.95. The mapping is per agent, not per server, and matches names case-insensitively.
+  A blank reason counts as none. A reason is not judged, so "because" passes. Without agent.yaml the
+  rule is skipped, as justifications could not exist. An unresolved app role (G5) might be high-risk,
+  so it is skipped by name, not passed. G10 applies: delegated grants count though a given token may
+  not carry them. `required_graph_permissions` in agent.yaml is not a justification.
 - **R7 [CLIENT] auto-approve lists (APL-010).** Cline: `autoApprove` (array) on each server —
   **verified** in docs examples. The docs say "Limit `autoApprove` to safe tools"; reading it as
   "tool names run without asking" is our inference. Source:

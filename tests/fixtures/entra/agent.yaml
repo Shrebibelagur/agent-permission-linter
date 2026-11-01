@@ -1,0 +1,6 @@
+name: entra-demo
+purpose: Triage mail, read calendars and files for one team.
+owner: alice@contoso.example
+invokers: single
+justifications:
+  Mail.ReadWrite: Moves triaged messages between folders in the shared mailbox.

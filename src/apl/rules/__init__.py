@@ -8,6 +8,7 @@ from apl.rules import (
     apl002_shared_credential,
     apl004_no_owner,
     apl005_secret_hygiene,
+    apl006_unjustified_permission,
     apl007_exceeds_purpose,
     apl010_no_approval_gate,
 )
@@ -17,6 +18,7 @@ RULES = [
     apl002_shared_credential,
     apl004_no_owner,
     apl005_secret_hygiene,
+    apl006_unjustified_permission,
     apl007_exceeds_purpose,
     apl010_no_approval_gate,
 ]

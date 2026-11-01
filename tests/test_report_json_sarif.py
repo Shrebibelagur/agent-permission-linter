@@ -40,7 +40,8 @@ def test_sarif_structure(fix):
     assert s["version"] == "2.1.0" and s["$schema"].endswith("sarif-2.1.0.json")
     run = s["runs"][0]
     rule_ids = [r["id"] for r in run["tool"]["driver"]["rules"]]
-    assert {"APL-001", "APL-002", "APL-004", "APL-005", "APL-007", "APL-010"} <= set(rule_ids)
+    expected = {f"APL-{n:03}" for n in (1, 2, 4, 5, 6, 7, 10)}
+    assert expected <= set(rule_ids)
     results = run["results"]
     assert len(results) == 6
     for r in results:
@@ -57,7 +58,7 @@ def test_sarif_structure(fix):
     assert levels["filesystem/write_file"] == "warning"
     assert levels["graph/frobnicate"] == "note"  # review_required
     notes = run["invocations"][0]["toolExecutionNotifications"]
-    assert len(notes) == 8 and all("not evaluated" in n["message"]["text"] for n in notes)
+    assert len(notes) == 9 and all("not evaluated" in n["message"]["text"] for n in notes)
 
 
 def test_sarif_mappings_are_labelled(fix):
@@ -73,7 +74,7 @@ def _clean(fix):
 
 def test_json_evaluated_and_skipped_counts(fix):
     s = json.loads(render_json(dirty(fix)))["summary"]
-    assert (s["evaluated"], s["skipped"], s["outcome"], s["message"]) == (3, 8, "findings", None)
+    assert (s["evaluated"], s["skipped"], s["outcome"], s["message"]) == (3, 9, "findings", None)
     s = json.loads(render_json(_clean(fix)))["summary"]
     assert (s["evaluated"], s["skipped"], s["outcome"]) == (3, 3, "no_findings")
     assert s["message"] == "No findings among the 3 checks that ran (3 not evaluated)."

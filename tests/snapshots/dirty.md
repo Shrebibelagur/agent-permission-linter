@@ -16,7 +16,7 @@
 | info | 0 | 0 |
 | **total** | **5** | **1** |
 
-Checks: 3 evaluated, 8 not evaluated; see [Not evaluated](#not-evaluated).
+Checks: 3 evaluated, 9 not evaluated; see [Not evaluated](#not-evaluated).
 
 ## Findings
 
@@ -88,6 +88,7 @@ Check what 'frobnicate' does. If 'graph' does not need it, remove or disable it.
 | APL-002 | `release-notes-bot` | not evaluated: missing agent.yaml invokers |
 | APL-004 | `graph` | not evaluated: missing owner data (run with --entra or --entra-mock) |
 | APL-005 | `graph` | not evaluated: missing credential data (run with --entra or --entra-mock) |
+| APL-006 | `graph` | not evaluated: missing granted permissions (run with --entra or --entra-mock) |
 | APL-010 | `github` | not evaluated: missing auto-approve list (no autoApprove/alwaysAllow in config) |
 | APL-010 | `filesystem` | not evaluated: missing auto-approve list (no autoApprove/alwaysAllow in config) |
 | APL-010 | `graph` | not evaluated: missing auto-approve list (no autoApprove/alwaysAllow in config) |

@@ -200,6 +200,8 @@ class AgentSpec(BaseModel):
     # Who invokes the agent: "single" (its owner only) or "multiple" (shared by many users).
     # Optional; APL-002 is skipped when absent.
     invokers: Literal["single", "multiple"] | None = None
+    # Why a high-risk permission is needed: permission name -> reason. Optional; used by APL-006.
+    justifications: dict[str, str] = Field(default_factory=dict)
     servers: list[ServerPurpose] = Field(default_factory=list)
 
 

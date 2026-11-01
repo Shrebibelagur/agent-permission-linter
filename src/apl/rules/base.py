@@ -49,6 +49,12 @@ NHI7 = MappingRef(
     title="Long-Lived Secrets",
     url="https://owasp.org/www-project-non-human-identities-top-10/2025/7-long-lived-secrets/",
 )
+NHI5 = MappingRef(
+    framework="OWASP Non-Human Identities Top 10 2025",
+    id="NHI5:2025",
+    title="Overprivileged NHI",
+    url="https://owasp.org/www-project-non-human-identities-top-10/2025/5-overprivileged-nhi/",
+)
 
 # Tools at or below this classifier confidence cannot support a hard verdict.
 LOW_CONFIDENCE = 0.5
