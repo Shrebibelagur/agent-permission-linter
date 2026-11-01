@@ -13,7 +13,7 @@ from pathlib import Path
 from apl import __version__, idmask
 from apl.models import Finding, Severity
 from apl.redact import redact_obj, scrub
-from apl.report.common import REAL_IDS_WARNING, display_path, outcome
+from apl.report.common import FREE_TEXT_LIMIT, REAL_IDS_WARNING, display_path, outcome
 from apl.scan import ScanReport
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -99,6 +99,8 @@ def build_sarif(report: ScanReport) -> dict:
         # An empty results array must not read as "clean" when nothing ran.
         level = "warning" if kind == "nothing_evaluated" else "note"
         notes.insert(0, {"level": level, "message": {"text": message}})
+    if idmask.anonymising_names():  # SARIF has no limits section: this is where it can be seen
+        notes.insert(0, {"level": "note", "message": {"text": FREE_TEXT_LIMIT}})
     properties = {
         "evaluated": len(report.result.evaluated),
         "skipped": len(report.result.skips),

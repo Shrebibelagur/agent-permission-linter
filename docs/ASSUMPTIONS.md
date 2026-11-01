@@ -676,9 +676,11 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   **Free text.** `purpose`, `justification` text and `env_keys` are free text and are printed as
   written. We cannot tell what such text says, so the flag does not try: the only change is that a
   registered name quoted exactly is replaced. "The payroll team" stays. `justification` reaches
-  reports through APL-007; `purpose` and `env_keys` print in `apl inventory`, which says on stderr
-  under this flag: "free-text fields are not masked: review before sharing". `apl scan` prints no such
-  line, though a report can hold `justification` text.
+  reports through APL-007; `purpose` and `env_keys` print in `apl inventory`. Under this flag both
+  `apl inventory` and `apl scan` say on stderr: "free-text fields are not masked: review before
+  sharing". A report says it too, so the warning stays with a saved file: in the limits section of
+  md and json, and as a notification in sarif, which has no such section. It is printed whether or
+  not this report holds any `justification` text.
 
   Other limits. A server named after a common word (`files`) also replaces that word wherever it
   stands alone, such as in fix text: this errs towards hiding and only hurts readability. Quoted text

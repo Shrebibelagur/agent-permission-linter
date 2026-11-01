@@ -38,7 +38,8 @@ def test_r20_says_free_text_prints_as_written():
     r20 = r20[: r20.index("- **R7 [CLIENT]")]
     assert "`purpose`, `justification` text and `env_keys` are free text" in r20
     assert "printed as\n  written" in r20
-    assert "free-text fields are not masked: review before sharing" in r20
+    assert "free-text fields are not masked: review before\n  sharing" in r20
+    assert "`apl scan` say on stderr" in r20.replace("\n  ", " ")
 
 
 def test_env_example_holds_no_salt_value():

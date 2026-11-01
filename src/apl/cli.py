@@ -203,6 +203,8 @@ def _run_scan(config, agent, tools, fmt, out, fail_on, connect, entra, entra_moc
         raise typer.Exit(2) from None
     for w in report.inventory.warnings:
         _say(f"warning: {w}")
+    if idmask.anonymising_names():
+        _say(_FREE_TEXT_NOTICE)
     if out is None:
         typer.echo(text)
     else:

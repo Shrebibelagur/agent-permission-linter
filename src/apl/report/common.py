@@ -19,6 +19,7 @@ STANDING_LIMITS = [
     "Granted scopes (APL-001) need Entra data (--entra or --entra-mock); otherwise skipped.",
 ]
 REAL_IDS_WARNING = "WARNING: this report contains real identifiers"
+FREE_TEXT_LIMIT = "Free-text fields (justification text) are not masked: review before sharing."
 ENTRA_LIMITS = {
     "mock": "Entra data came from saved fixtures (--entra-mock), not a real tenant.",
     "live": "Entra data was read from Microsoft Graph during this scan (GET only).",
@@ -108,6 +109,8 @@ def collect_limits(report: ScanReport) -> Limits:
     lim = Limits(parser_warnings=[display_path(w) for w in report.inventory.warnings])
     if report.inventory.entra_source:
         lim.standing.append(ENTRA_LIMITS[report.inventory.entra_source])
+    if idmask.anonymising_names():
+        lim.standing.append(FREE_TEXT_LIMIT)
     for srv in report.inventory.servers:
         src = display_path(srv.evidence.source)
         if srv.format_status == "unverified":
