@@ -51,6 +51,19 @@ That fixture is deliberately over-powered. Excerpt of `report.md` (full report:
 The well-scoped fixture in `tests/fixtures/clean/` produces no findings
 ([tests/snapshots/clean.md](tests/snapshots/clean.md)).
 
+## Checking the guards
+
+The tests prove the code does what they check. `tools/mutation/` proves the output guards are
+really tested, by breaking each one and confirming a test fails. It works on a throwaway copy with
+an isolated home and environment, and takes 10 to 15 minutes, so it is not part of `pytest`.
+
+```
+python tools/mutation/guards.py list
+python tools/mutation/guards.py run
+```
+
+See [tools/mutation/README.md](tools/mutation/README.md).
+
 ## `apl scan`
 
 | Option | Meaning |

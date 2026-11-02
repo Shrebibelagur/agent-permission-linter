@@ -606,11 +606,21 @@ silently. Tools that are unclassified or have confidence ≤ 0.5 never support a
   simulated failures and one real process. On 2026-11-01, 27 guards were each broken in a throwaway
   copy: 25 failed a test at once. The two that did not exposed a test that could never fail
   (`--show-ids` outliving the command) and a crash where a clean error belonged, unnoticed because a
-  second guard held; both are now caught. The harness itself is not in the repo.
-  **Guard count: 89.** Each later change added guards under the same rule, and the count is the
+  second guard held; both are now caught.
+  **Guard count: 94.** Each later change added guards under the same rule, and the count is the
   number broken one at a time on the final code of R20 to R22 with every one failing a test. New
   guards that survived a first run showed real test gaps each time, so a passing suite alone was
   not taken as proof.
+
+  **Harness (`tools/mutation/`).** `guards.py list` and `guards.py run`. Each run works on a throwaway
+  temp copy with an allowlisted environment, so real credentials cannot reach it, and with every home
+  variable pointing into the temp directory, so no real salt file can be made. Only a fixed fake salt is used.
+  The run fails if tests would import the real package, if a file appears in the isolated home, or
+  if the repo changed. It is outside the default `pytest` run, but `tests/test_mutation_entries.py` is
+  inside it and fails when an entry no longer applies or this count is wrong. That test is excluded
+  from harness runs: it reads the source, so in a broken copy it would fail every time and make every
+  guard look caught. **Limit:** a caught guard shows that some test fails, not that the failing test
+  is the one meant for that guard.
 
   **Limits.**
   - **Finding ids now depend on the salt.** Two installs give different ids for the same app, and
