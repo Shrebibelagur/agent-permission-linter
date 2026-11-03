@@ -4,9 +4,14 @@
 
 Please report privately. Do not open a public issue for a security problem.
 
-- **Contact:** `<SECURITY CONTACT: to be added before publishing>`
-- If the repository is on GitHub, you can also use **private vulnerability reporting**
-  (Security tab, "Report a vulnerability") once it is enabled.
+Use GitHub's **private vulnerability reporting**:
+
+1. Open this repository on GitHub and go to the **Security** tab.
+2. Click **Report a vulnerability**.
+3. Fill in the advisory form and submit. Only you and the maintainers can see it.
+
+There is no security email address. If the button is missing, open a public issue that says only
+that you have a security report and asks for a private channel, with no details of the problem.
 
 Include the version or commit, the command you ran, and a minimal config that shows the problem.
 **Use fake values only.** Do not send real tenant ids, client ids, secrets, tokens or report output
