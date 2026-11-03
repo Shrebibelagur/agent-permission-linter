@@ -5,7 +5,8 @@
 Checks, in order:
   1. LICENSE and the release docs exist and are not empty.
   2. No GUID in a tracked file outside tests/fixtures/, except the allowlist below.
-  3. gitleaks over the whole git history, if gitleaks is installed (skipped, not failed, if not).
+  3. gitleaks over the whole git history with .gitleaks.toml, if gitleaks is installed (skipped,
+     not failed, if not). The config allowlists only the planted test values, under tests/.
   4. pytest.
   5. ruff check.
 
@@ -33,6 +34,7 @@ REQUIRED_FILES = (
     "CHANGELOG.md",
     "docs/THREAT_MODEL.md",
     "docs/ASSUMPTIONS.md",
+    ".gitleaks.toml",
 )
 LICENSE_MARKERS = ("Apache License", "Version 2.0, January 2004")
 
@@ -108,23 +110,46 @@ def check_guids() -> list[str]:
     return errors
 
 
+GITLEAKS_CONFIG = ROOT / ".gitleaks.toml"
+MIN_GITLEAKS = (8, 25, 0)  # first version with [[allowlists]] and targetRules
+
+
+def gitleaks_version(exe: str) -> tuple[int, ...] | None:
+    r = _run([exe, "version"], capture_output=True)
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", r.stdout)
+    return tuple(int(x) for x in m.groups()) if r.returncode == 0 and m else None
+
+
+def run_gitleaks(exe: str, mode: str, cwd: Path) -> tuple[int, list[dict]]:
+    """Run `gitleaks <mode> .` in `cwd` with this repo's config. Paths come back relative to
+    `cwd`, which the config's `^tests/` conditions rely on. Exit 0 = clean, 1 = findings."""
+    with tempfile.TemporaryDirectory() as tmp:
+        report = Path(tmp) / "gitleaks.json"
+        r = subprocess.run(  # noqa: S603
+            [exe, mode, ".", "--config", str(GITLEAKS_CONFIG), "--redact", "--no-banner",
+             "--log-level", "error", "--report-format", "json", "--report-path", str(report),
+             "--exit-code", "1"],
+            cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        leaks = json.loads(report.read_text(encoding="utf-8") or "[]") if report.is_file() else []
+    return r.returncode, leaks
+
+
 def check_gitleaks() -> tuple[list[str], str]:
     exe = shutil.which("gitleaks")
     if not exe:
         return [], "SKIPPED (gitleaks not installed; install it to scan history)"
-    with tempfile.TemporaryDirectory() as tmp:
-        report = Path(tmp) / "gitleaks.json"
-        r = _run(
-            [exe, "detect", "--source", str(ROOT), "--redact", "--no-banner",
-             "--log-level", "error", "--report-format", "json", "--report-path", str(report),
-             "--exit-code", "1"],
-            capture_output=True,
-        )
-        if r.returncode == 0:
-            return [], "no leaks in git history"
-        if r.returncode != 1 or not report.is_file():
-            return [f"gitleaks failed to run (exit {r.returncode})"], ""
-        leaks = json.loads(report.read_text(encoding="utf-8") or "[]")
+    if not GITLEAKS_CONFIG.is_file():
+        return ["missing .gitleaks.toml"], ""
+    version = gitleaks_version(exe)
+    if version is None or version < MIN_GITLEAKS:
+        need = ".".join(map(str, MIN_GITLEAKS))
+        return [f"gitleaks {need} or later is needed for .gitleaks.toml"], ""
+    code, leaks = run_gitleaks(exe, "git", ROOT)
+    if code == 0:
+        return [], "0 findings in git history (with .gitleaks.toml)"
+    if code != 1:
+        return [f"gitleaks failed to run (exit {code})"], ""
     return [
         f"gitleaks {x.get('RuleID')}: {x.get('File')}:{x.get('StartLine')} "
         f"(commit {str(x.get('Commit', ''))[:8]})"

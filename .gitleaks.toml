@@ -1,0 +1,58 @@
+# gitleaks config for this repo. Needs gitleaks 8.25 or later ([[allowlists]] with targetRules).
+#
+# Every default rule stays on. The only exceptions are the fake values the tests plant on
+# purpose to prove redaction works. Each allowlist below is narrow on all three axes at once
+# (condition = "AND"): one rule, one exact value, and only under tests/. The same value
+# anywhere else, or any other value under tests/, is still a finding.
+#
+# Rules for editing:
+#   - No path-wide or rule-wide ignores. Every entry needs targetRules, paths = ['''^tests/''']
+#     and an exact, anchored value in regexes. tests/test_gitleaks_config.py enforces this.
+#   - Only invented values. Never allowlist a real credential, revoked or not: remove it from
+#     history instead.
+#   - Every value listed must still appear under tests/, or the test above fails as stale.
+
+title = "agent-permission-linter"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Planted fake GitHub PAT (redaction, JSONC, config and rule tests)"
+targetRules = ["github-pat"]
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "secret"
+regexes = ['''^ghp_FAKEfakeFAKEfakeFAKEfakeFAKEfake0000$''']
+
+[[allowlists]]
+description = "Planted fake Entra client secret in the observed 8Q~ shape (G12)"
+targetRules = ["azure-ad-client-secret"]
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "secret"
+regexes = ['''^abc8Q~FAKEfakeFAKEfakeFAKEfakeFAKEfake00$''']
+
+[[allowlists]]
+description = "Planted fake AWS access key id: the alphabet after AKIA"
+targetRules = ["aws-access-token"]
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "secret"
+regexes = ['''^AKIAABCDEFGHIJKLMNOP$''']
+
+[[allowlists]]
+description = "Invented random-looking token for the R22 entropy tests"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "secret"
+regexes = ['''^qT7vZ2mK9xLw4RbN8sYc3Hd6$''']
+
+[[allowlists]]
+description = "Invented upper-case GUID in the id-masking tests"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "secret"
+regexes = ['''^ABCDEF12-3456-4789-ABCD-EF1234567890$''']

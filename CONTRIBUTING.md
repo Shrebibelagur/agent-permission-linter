@@ -30,7 +30,12 @@ python tools/release_check.py
 
 It runs pytest and ruff, checks that the license and docs exist, looks for GUIDs outside the
 fixtures, and scans git history with [gitleaks](https://github.com/gitleaks/gitleaks) if it is
-installed. It exits non-zero on any failure.
+installed (8.25 or later). It exits non-zero on any failure.
+
+`.gitleaks.toml` keeps every default gitleaks rule and allowlists only the fake values the tests
+plant on purpose: each entry is one rule, one exact value, and only under `tests/`. If a new test
+needs a planted secret, prefer reusing one of those values. If you must add one, add a narrow
+entry in the same form; a path-wide or rule-wide ignore will be refused in review.
 
 Report snapshots live in `tests/snapshots/`. If you change report wording on purpose, update the
 snapshot in the same commit, and check that the README excerpt still matches
