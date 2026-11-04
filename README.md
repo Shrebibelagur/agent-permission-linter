@@ -1,17 +1,33 @@
 # Agent Permission Linter (`apl`) — v0.1.0
 
-Finds AI agents that hold more power than their declared task needs. A finding is *granted*
-capability exceeding *required* capability.
+Checks the configs and files you give it for AI agents that hold more power than their declared
+task needs. A finding is *granted* capability exceeding *required* capability.
 
 `apl` reads your MCP client configs (Claude Desktop, Claude Code, VS Code, Cursor, Windsurf), an
 optional `agent.yaml` that declares what the agent is for, saved `tools/list` results, and
-optionally your Entra app registrations through Microsoft Graph. It reports, for example, an agent
+optionally your Entra app registrations through Microsoft Graph.
+
+- **MCP** (Model Context Protocol): the protocol AI clients use to connect an agent to tool
+  servers.
+- **Entra** (Microsoft Entra ID, formerly Azure AD): Microsoft's identity service, where app
+  registrations and their Microsoft Graph permissions live.
+- **`tools/list`**: the MCP request that returns a server's tools, with their names, descriptions,
+  input schemas and annotations. `apl` reads a saved copy of the response; see
+  [Saved `tools/list` files](#saved-toolslist-files).
+
+Client caveats: the Windsurf docs now redirect to Devin, and the documented config path is
+`~/.config/devin/mcp_config.json` (ASSUMPTIONS A5). VS Code `settings.json` → `mcp.servers` is not
+in the current official VS Code docs; `apl` still parses it but marks every server from it as an
+unverified format (A3).
+
+It reports, for example, an agent
 whose purpose is "write release notes" but that can delete repositories, or an Entra app granted
 `Mail.ReadWrite` behind a server whose tools only read mail.
 
 **Read-only.** It never starts or contacts an MCP server (`--connect` is refused). Entra access is
 optional and GET-only, with the token held in memory. There is no `apply` command. Secrets are
-redacted at parse time and again on every output; only env var *names* are stored.
+redacted at parse time and again on every output; only env var *names* are stored. Redaction can
+miss some secrets: see limits 5 to 7 and 10 in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md#known-limits).
 
 ## Quickstart (5 minutes)
 
@@ -23,6 +39,15 @@ Python 3.11 or later.
 git clone <this repo> && cd agent-permission-linter
 python -m venv .venv
 # Windows: .venv\Scripts\activate    Linux/macOS: source .venv/bin/activate
+pip install -e '.[dev]'
+```
+
+PowerShell:
+
+```powershell
+git clone <this repo>; cd agent-permission-linter
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -e '.[dev]'
 ```
 
@@ -38,6 +63,17 @@ apl scan -c tests/fixtures/configs/claude_desktop.json \
 echo $?   # 1: at least one finding at or above "high"
 ```
 
+PowerShell:
+
+```powershell
+apl scan -c tests/fixtures/configs/claude_desktop.json -a tests/fixtures/agents/release_notes_bot.yaml -t tests/fixtures/tools/claude_desktop_tools.json --format md --out report.md --fail-on high
+$LASTEXITCODE   # 1: at least one finding at or above "high"
+```
+
+It prints `warning: github/delete_repository: possible prompt injection in tool metadata`. That is
+deliberate: the fixture's description for that tool contains an injection phrase, to show that
+`apl` notices it and does not act on it.
+
 Then the Entra demo, over saved Graph-shaped responses:
 
 ```bash
@@ -45,9 +81,24 @@ apl scan -c tests/fixtures/entra/mcp.json -t tests/fixtures/entra/tools.json \
   --entra-mock tests/fixtures/graph
 ```
 
+PowerShell:
+
+```powershell
+apl scan -c tests/fixtures/entra/mcp.json -t tests/fixtures/entra/tools.json --entra-mock tests/fixtures/graph
+```
+
 It reports an over-scoped `Mail.ReadWrite` grant, ownerless apps and expired or long-lived
-credentials. The well-scoped fixture in `tests/fixtures/clean/` produces no findings
-([tests/snapshots/clean.md](tests/snapshots/clean.md)).
+credentials.
+
+The well-scoped fixture produces no findings
+([tests/snapshots/clean.md](tests/snapshots/clean.md)). The same command works in bash and
+PowerShell:
+
+```bash
+apl scan -c tests/fixtures/clean/mcp.json -a tests/fixtures/clean/agent.yaml -t tests/fixtures/clean/tools.json
+```
+
+3 checks run and 3 are not evaluated there, so "no findings" covers only the 3 checks that ran.
 
 ### 3. Scan your own tenant (read-only)
 
@@ -78,6 +129,15 @@ Graph-shaped fixtures, not a real tenant**, so try it in a lab tenant first.
    $env:CLIENT_SECRET = Read-Host -MaskInput "client secret"
    ```
 
+   `-MaskInput` needs PowerShell 7.1 or later. In Windows PowerShell 5.1, use this instead. It also
+   never echoes the secret:
+
+   ```powershell
+   $s = Read-Host -AsSecureString "client secret"
+   $env:CLIENT_SECRET = [System.Net.NetworkCredential]::new("", $s).Password
+   Remove-Variable s
+   ```
+
    bash:
 
    ```bash
@@ -91,11 +151,29 @@ Graph-shaped fixtures, not a real tenant**, so try it in a lab tenant first.
    apl scan -c ~/.cursor/mcp.json -a agent.yaml -t tools.json --entra --format sarif --out apl.sarif
    ```
 
-6. When you are done, delete the client secret, or the whole app registration.
+   `tools.json` is a saved `tools/list` result for your servers; see the next section.
+
+6. When you are done, clear the secret from your session (`Remove-Item Env:CLIENT_SECRET` in PowerShell, `unset CLIENT_SECRET` in bash), then delete the client secret, or the whole app registration.
 
 The token is fetched with the OAuth2 client-credentials flow over REST and kept in memory. The HTTP
 client refuses anything but `GET https://graph.microsoft.com/...`. Details: G1 to G12 in
 [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
+
+### Saved `tools/list` files
+
+`apl` never contacts a server, so it cannot list tools itself. Save the `tools/list` JSON response
+from your MCP client or server, and pass it with `-t`. The file can be any of these (ASSUMPTIONS
+S9):
+
+- the JSON-RPC response: `{"result": {"tools": [...]}}`
+- the bare result: `{"tools": [...]}`
+- a map from server name (as in the client config) to either of the above:
+  `{"github": {"tools": [...]}}`. This is `apl`'s own format, not the spec's.
+
+The first two only apply when the config has exactly one server; otherwise the file is ignored with
+a warning. For several servers, use the map. `resultType` must be missing or `"complete"`, and the
+file is assumed to hold the full list (pagination is ignored, S3). A server with no tool list is
+reported as "capabilities unknown".
 
 ## Declaring the purpose: `agent.yaml`
 
@@ -164,12 +242,15 @@ and framework references labelled "suggested mapping". A rule that lacks its inp
 | Rule | Finds | Needs |
 |---|---|---|
 | APL-001 | Granted scope broader than any tool on the server needs | `--entra` or `--entra-mock`, tools |
-| APL-002 | Maker-mode or shared credential: one token for every invoker | `agent.yaml` `invokers` |
+| APL-002 | Maker-mode (the agent runs on one person's own token, such as a PAT, so every invoker gets that person's access) or shared credential: one token for every invoker | `agent.yaml` `invokers` |
 | APL-004 | Entra app linked to a server has no owner | Entra |
 | APL-005 | Linked credential with no expiry, expired, or lifetime over 180 days | Entra |
 | APL-006 | High-risk Graph permission with no justification in `agent.yaml` | Entra, `agent.yaml` |
 | APL-007 | Tool capability exceeds the declared purpose | tools, `agent.yaml` |
 | APL-010 | High-impact tool auto-approved with no human gate | tools, `autoApprove`/`alwaysAllow` in config |
+
+The gaps in the numbering are rules that are planned but not built: APL-003 and APL-009 (Entra
+data) and APL-008 (missing audience binding, ASSUMPTIONS S7).
 
 ## `apl scan` flags
 
@@ -178,7 +259,7 @@ and framework references labelled "suggested mapping". A rule that lacks its inp
 | `-c/--config` | MCP client config (repeatable). JSONC accepted. |
 | `-a/--agent` | agent.yaml: the declared purpose (optional; some rules skip without it) |
 | `-t/--tools` | saved `tools/list` result(s), offline (optional; capability rules skip without it) |
-| `-f/--format` | `md` (default), `json` (`schema_version` 1.0), `sarif` (2.1.0) |
+| `-f/--format` | `md` (default), `json` (`schema_version` 1.0), `sarif` (2.1.0; SARIF is the standard JSON format for static-analysis results, which code-scanning tools import) |
 | `-o/--out` | write the report to a file instead of stdout |
 | `--fail-on` | `none` (default), `low`, `medium`, `high` |
 | `--entra-mock DIR` | read saved Graph responses from `DIR` (no network, no credentials) |
@@ -220,8 +301,10 @@ python -c "import secrets; print(secrets.token_hex(32))"
 Known token shapes are always removed. On top of that, any token of 20 or more characters in a
 server's `command` or `args` becomes `[REDACTED]` if it looks random (mixed case and digits, high
 entropy). Only that token goes, so `C:/keys/<token>/run.exe` keeps its path. No flag brings it back.
-It can miss secrets (low entropy, lower-case hex, under 20 characters) and can over-redact a
-random-looking build id. See R22 in [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
+It can over-redact a random-looking build id. Low-entropy secrets, single-case hex, anything under
+20 characters, anything split by separators, and exact-match secrets under 8 characters are missed
+([THREAT_MODEL](docs/THREAT_MODEL.md#known-limits) limit 7). See R22 in
+[docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
 
 ## Limits and honesty
 
@@ -236,7 +319,8 @@ verb is `unknown` with "review required", not guessed.
 classifier, so these are regression checks. A real accuracy figure needs a new held-out set of real
 tools, labelled blind and measured once. That has not been done.
 
-Current results, classifier v2 (ASSUMPTIONS E7):
+A **held-out** set is a corpus kept apart from development, to test the classifier on tools it was
+not tuned on. Current results, classifier v2 (ASSUMPTIONS E7):
 
 | Corpus | Tools | Exact | Missing (understated) | Missing + unclassified |
 |---|---:|---:|---:|---:|
@@ -266,6 +350,12 @@ bucketed by [tests/corpus_report.py](tests/corpus_report.py). Reproduce them wit
 pytest -s tests/test_classifier_corpus.py tests/test_classifier_holdout*.py
 ```
 
+PowerShell does not expand `*` for native commands, so list the files:
+
+```powershell
+pytest -s tests/test_classifier_corpus.py (Get-ChildItem tests/test_classifier_holdout*.py).FullName
+```
+
 The corpora are hand-written tool names, not tools from real servers, and are small (36 to 48
 tools each). History and caveats for every row: E1 to E7 in
 [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
@@ -276,8 +366,11 @@ tools each). History and caveats for every row: E1 to E7 in
   `run_pipeline` to `run_report` turns a high violation into a low review; a name and parameters
   that agree are trusted.
 - **Live Entra mode is untested** against a real tenant.
-- **Pseudonymous, not anonymous.** Permission names, tool names, env var names, file paths and free
-  text still print.
+- **Pseudonymous, not anonymous.** Permission names (including custom ones that name the
+  organisation), tool names, env var and header names, and config paths still print. Pseudonyms are
+  24 bits and can be confirmed by anyone who holds the salt. Free text (`purpose`, `justification`
+  text, `env_keys`) prints as written. ([THREAT_MODEL](docs/THREAT_MODEL.md#known-limits) limits 5
+  and 8.)
 - **Secrets with no known shape can print**, and a URL with no scheme is not shortened.
 - **`network` is coarse:** it does not say where data goes.
 

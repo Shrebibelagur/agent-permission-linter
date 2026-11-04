@@ -7,7 +7,7 @@ purpose and checks that a test fails. The last full run broke 94 guards and caug
 
 ## What `apl` is
 
-An offline linter. It reads MCP client configs, an optional `agent.yaml` (the declared purpose),
+A linter that works from local files, with an optional read-only (GET-only) Graph read. It reads MCP client configs, an optional `agent.yaml` (the declared purpose),
 saved `tools/list` results and, optionally, Entra data through Microsoft Graph. It reports agents
 whose granted capability exceeds what their purpose needs. It never starts or contacts an MCP
 server and never writes to Entra.
@@ -95,7 +95,7 @@ are never read for classification, and every server-written signal can only add 
 | `--anonymise-names` replaces display, server, agent and owner names, and `command`/`url`/`args` in inventory (R20) | [tests/test_anonymise_names.py](../tests/test_anonymise_names.py), [tests/test_anonymise_owner.py](../tests/test_anonymise_owner.py), [tests/test_anonymise_more.py](../tests/test_anonymise_more.py), [tests/test_anonymise_urls.py](../tests/test_anonymise_urls.py); guards *names not masked before render*, *command / url / args not masked* |
 | Under `--anonymise-names`, a free-text notice on stderr and in the report | [tests/test_free_text_notice.py](../tests/test_free_text_notice.py); guards *free-text notice missing*, *limits line missing* |
 | Owner ids and linked app ids are never dumped (`Evidence.app`, `MCPServer.entra_apps` excluded) (R17, G10) | [`test_app_identity_never_reaches_output`](../tests/test_finding_ids.py), [`test_no_full_id_in_any_format`](../tests/test_report_masking.py) |
-| Fixtures and test files hold no real ids | [tools/release_check.py](../tools/release_check.py) fails on a GUID outside `tests/fixtures/` that is not on its allowlist; [`test_entries_hold_no_real_values`](../tests/test_mutation_entries.py) |
+| Tracked files outside `tests/fixtures/` hold no GUID that is not on an allowlist, and guard entries hold no GUID or known token prefix. `tests/fixtures/` is not scanned for ids, so nothing checks that its GUIDs are fake | [tools/release_check.py](../tools/release_check.py) fails on a GUID outside `tests/fixtures/` that is not on its allowlist; [`test_entries_hold_no_real_values`](../tests/test_mutation_entries.py) |
 
 ### Use the scanner as a tool (goal 4)
 
@@ -114,7 +114,7 @@ are never read for classification, and every server-written signal can only add 
 |---|---|
 | Descriptions are dropped after an injection-marker scan, which raises a warning; schema `default` and `enum` values are never read (C2) | [`test_injection_in_descriptions_changes_nothing`](../tests/test_classifier_schema.py), [`test_injection_text_is_not_kept_anywhere_from_the_schema`](../tests/test_classifier_schema.py), [`test_schema_injection_raises_the_inventory_warning`](../tests/test_classifier_schema.py) |
 | A parameter named like an instruction is matched as vocabulary, not obeyed | [`test_instruction_as_a_parameter_name_is_matched_not_obeyed`](../tests/test_classifier_schema.py) |
-| Untrusted text for any future LLM layer is wrapped in random delimiters, with look-alikes neutralised (`apl/untrusted.py`) | [`test_wrap_untrusted_neutralizes_delimiters`](../tests/test_redact_untrusted.py), [`test_injection_detection`](../tests/test_redact_untrusted.py) |
+| Untrusted text for any future LLM layer is wrapped in random delimiters, with look-alikes neutralised (`src/apl/untrusted.py`) | [`test_wrap_untrusted_neutralizes_delimiters`](../tests/test_redact_untrusted.py), [`test_injection_detection`](../tests/test_redact_untrusted.py) |
 
 ## Known limits
 

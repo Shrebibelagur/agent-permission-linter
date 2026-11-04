@@ -23,7 +23,7 @@ Tools: mcp-audit-scanner 0.26.0 (static config scan), Cisco MCP Scanner 4.8.7 (s
 ## Where apl is behind
 - Config hygiene: mcp-audit reports a plaintext secret, silent npx -y installs, unpinned versions and known CVEs. apl reports none of these.
 - apl evaluated nothing on the claude_desktop fixture (no agent file, no Entra data).
-- apl printed a prompt-injection warning for one tool but only in the terminal, not as a report finding.
+- apl printed a prompt-injection warning for one tool. It appears as a parser warning in the Markdown and JSON reports, but not as a finding and not in SARIF.
 
 ## Limits of this comparison
 - Three synthetic fixtures, authored for apl. Not a benchmark.
