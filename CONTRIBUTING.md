@@ -37,6 +37,40 @@ plant on purpose: each entry is one rule, one exact value, and only under `tests
 needs a planted secret, prefer reusing one of those values. If you must add one, add a narrow
 entry in the same form; a path-wide or rule-wide ignore will be refused in review.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request. It uses no
+secrets and makes no network calls to Graph (the `--entra` mode is never run).
+
+- **test** (Ubuntu and Windows, Python 3.11 and 3.13): `ruff check .` and `pytest -q`. On Ubuntu
+  it installs a pinned, checksum-verified gitleaks first and fails if any test in
+  `tests/test_gitleaks_config.py` is skipped.
+- **gitleaks**: the same full-history scan as `tools/release_check.py`, with `.gitleaks.toml`.
+
+The guard harness (`tools/mutation`) is not run in CI; it takes 10 to 15 minutes. Run it
+yourself when you change a guard (see below).
+
+To run the same checks locally, install gitleaks 8.25 or later first so its tests are not
+skipped, then:
+
+```powershell
+# PowerShell
+pip install -e ".[dev]"
+ruff check .
+pytest -q -rs
+python tools/release_check.py   # includes the gitleaks history scan
+```
+
+```bash
+# bash
+pip install -e '.[dev]'
+ruff check .
+pytest -q -rs
+python tools/release_check.py   # includes the gitleaks history scan
+```
+
+With `-rs`, pytest lists skipped tests; none in `test_gitleaks_config.py` should be skipped.
+
 Report snapshots live in `tests/snapshots/`. If you change report wording on purpose, update the
 snapshot in the same commit, and check that the README excerpt still matches
 (`tests/test_readme.py` enforces it).

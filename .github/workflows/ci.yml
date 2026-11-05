@@ -1,0 +1,154 @@
+# CI: offline checks only.
+#
+# - No secrets are used anywhere, and nothing here talks to Microsoft Graph: the live Entra mode
+#   (--entra) is never run. Every test runs offline against fixtures.
+# - Triggers are push to main and pull_request. pull_request_target is never used: fork PRs run
+#   with a read-only token and no secrets.
+# - Intentionally excluded: the guard mutation harness (tools/mutation). It takes 10 to 15 minutes;
+#   run it locally after changing a guard (see CONTRIBUTING.md).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # .gitleaks.toml needs 8.25 or later ([[allowlists]] with targetRules).
+  GITLEAKS_VERSION: "8.30.1"
+  # sha256 of gitleaks_8.30.1_linux_x64.tar.gz, from gitleaks_8.30.1_checksums.txt.
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install gitleaks (pinned, checksum-verified)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sums="gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          dir="${RUNNER_TEMP}/gitleaks"
+          mkdir -p "$dir"
+          cd "$dir"
+          curl -fsSL --proto '=https' --tlsv1.2 -o "$tarball" "$base/$tarball"
+          curl -fsSL --proto '=https' --tlsv1.2 -o "$sums" "$base/$sums"
+          # The release checksums file must list the hash pinned above for this tarball...
+          grep -qxF "${GITLEAKS_SHA256}  ${tarball}" "$sums"
+          # ...and the downloaded tarball must match it.
+          echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum --check --strict -
+          tar -xzf "$tarball" gitleaks
+          test "$("$dir/gitleaks" version)" = "${GITLEAKS_VERSION}"
+          echo "$dir" >> "$GITHUB_PATH"
+
+      - name: Install package
+        run: pip install -e ".[dev]"
+
+      - name: ruff
+        run: ruff check .
+
+      - name: pytest
+        run: pytest -q -rs --junitxml="${{ runner.temp }}/pytest.xml"
+
+      # The gitleaks scanning tests skip themselves when gitleaks is missing. On Linux it is
+      # installed above, so any skip there is a CI fault: fail instead of passing silently.
+      - name: Check the gitleaks tests ran (not skipped)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          python - "${{ runner.temp }}/pytest.xml" <<'EOF'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          cases = [
+              c for c in ET.parse(sys.argv[1]).getroot().iter("testcase")
+              if c.get("classname", "").endswith("test_gitleaks_config")
+          ]
+          skipped = [c.get("name") for c in cases if c.find("skipped") is not None]
+          ran = len(cases) - len(skipped)
+          print(f"test_gitleaks_config: {ran} ran, {len(skipped)} skipped")
+          for name in skipped:
+              print(f"  skipped: {name}")
+          sys.exit(1 if skipped or ran == 0 else 0)
+          EOF
+
+  gitleaks:
+    name: gitleaks history scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the scan covers every commit, so it needs full history
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Install gitleaks (pinned, checksum-verified)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          sums="gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          dir="${RUNNER_TEMP}/gitleaks"
+          mkdir -p "$dir"
+          cd "$dir"
+          curl -fsSL --proto '=https' --tlsv1.2 -o "$tarball" "$base/$tarball"
+          curl -fsSL --proto '=https' --tlsv1.2 -o "$sums" "$base/$sums"
+          # The release checksums file must list the hash pinned above for this tarball...
+          grep -qxF "${GITLEAKS_SHA256}  ${tarball}" "$sums"
+          # ...and the downloaded tarball must match it.
+          echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum --check --strict -
+          tar -xzf "$tarball" gitleaks
+          test "$("$dir/gitleaks" version)" = "${GITLEAKS_VERSION}"
+          echo "$dir" >> "$GITHUB_PATH"
+
+      # Calls the same function tools/release_check.py uses, so the flags (--config, --redact,
+      # report fields) cannot drift. Output is rule, path, line and commit only; never a value.
+      - name: Scan git history (same as tools/release_check.py)
+        shell: bash
+        run: |
+          python - <<'EOF'
+          import sys
+
+          sys.path.insert(0, "tools")
+          import release_check as rc
+
+          errors, note = rc.check_gitleaks()
+          if note.startswith("SKIPPED"):
+              errors = [note]
+          for e in errors:
+              print(f"  {e}")
+          print(f"gitleaks history scan: {'FAIL' if errors else 'PASS: ' + note}")
+          sys.exit(1 if errors else 0)
+          EOF
