@@ -111,8 +111,26 @@ def _scrubbed(
         set_show_urls(False)
 
 
+def _print_version(value: bool) -> None:
+    if value:
+        from apl import __version__
+
+        typer.echo(f"apl {__version__}")
+        raise typer.Exit()
+
+
 @app.callback()
-def _root() -> None:
+def _root(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            callback=_print_version,
+            is_eager=True,
+            help="Print the version and exit.",
+        ),
+    ] = False,
+) -> None:
     """Agent Permission Linter."""
 
 
