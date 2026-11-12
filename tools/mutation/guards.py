@@ -28,6 +28,8 @@ COPIED_FILES = ("pyproject.toml", "README.md", ".env.example")
 # Reads the real source to check entries, so inside a mutated copy it would fail every time and
 # make every guard look caught.
 STALE_CHECK = "tests/test_mutation_entries.py"
+GITLEAKS_CHECK = "tests/test_gitleaks_config.py"  # needs a real git checkout; not relevant to any guard
+RELEASE_CHECK = "tests/test_release_check.py"  # scans the real repo tree; not relevant to any guard
 FAKE_SALT = "mutation-harness-fake-salt-0000"
 PASSED_ENV = ("PATH", "PATHEXT", "SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "COMSPEC")
 HOME_VARS = ("HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "XDG_CONFIG_HOME")
@@ -81,6 +83,8 @@ def pytest_command() -> list[str]:
         "-p",
         "no:cacheprovider",
         f"--ignore={STALE_CHECK}",
+        f"--ignore={GITLEAKS_CHECK}",
+        f"--ignore={RELEASE_CHECK}",
     ]
 
 
