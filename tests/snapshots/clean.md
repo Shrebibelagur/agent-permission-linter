@@ -2,7 +2,7 @@
 
 - **Agent:** docs-assistant
 - **Generated:** 2026-01-01T00:00:00Z
-- **apl version:** 0.1.0.dev0
+- **apl version:** 0.1.0
 - **Servers scanned:** 2
 
 ## Summary

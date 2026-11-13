@@ -1,5 +1,7 @@
 # Agent Permission Linter (`apl`) — v0.1.0
 
+_Early release (v0.1.0). Feedback welcome — open an issue or see [SECURITY.md](SECURITY.md) for private reports._
+
 Checks the configs and files you give it for AI agents that hold more power than their declared
 task needs. A finding is *granted* capability exceeding *required* capability.
 
@@ -29,6 +31,8 @@ optional and GET-only, with the token held in memory. There is no `apply` comman
 redacted at parse time and again on every output; only env var *names* are stored. Redaction can
 miss some secrets: see limits 5 to 7 and 10 in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md#known-limits).
 
+**Privacy.** Reports never print raw tenant, client, or object IDs. They print pseudonyms (`app-3f9a1c`, `tenant-9b02e4`) keyed by a per-install salt (`APL_ID_SALT`, or a file under `%APPDATA%\apl` on Windows / `~/.config/apl` elsewhere). With no usable salt, `apl` refuses to print rather than leak the raw ID. See `src/apl/idmask.py` and R19 in [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md).
+
 ## Quickstart (5 minutes)
 
 ### 1. Install
@@ -36,7 +40,7 @@ miss some secrets: see limits 5 to 7 and 10 in [docs/THREAT_MODEL.md](docs/THREA
 Python 3.11 or later.
 
 ```bash
-git clone <this repo> && cd agent-permission-linter
+git clone https://github.com/Shrebibelagur/agent-permission-linter.git && cd agent-permission-linter
 python -m venv .venv
 # Windows: .venv\Scripts\activate    Linux/macOS: source .venv/bin/activate
 pip install -e '.[dev]'
@@ -45,7 +49,7 @@ pip install -e '.[dev]'
 PowerShell:
 
 ```powershell
-git clone <this repo>; cd agent-permission-linter
+git clone https://github.com/Shrebibelagur/agent-permission-linter.git; cd agent-permission-linter
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -e '.[dev]'
@@ -167,8 +171,13 @@ S9):
 
 - the JSON-RPC response: `{"result": {"tools": [...]}}`
 - the bare result: `{"tools": [...]}`
-- a map from server name (as in the client config) to either of the above:
-  `{"github": {"tools": [...]}}`. This is `apl`'s own format, not the spec's.
+- a map from server name (as in the client config) to either of the above. This is `apl`'s own format, not the spec's:
+
+  ```json
+  { "github": { "result": { "tools": [] } }, "filesystem": { "tools": [] } }
+  ```
+
+  A server in your config with no matching entry is reported as "no tool list; capabilities unknown".
 
 The first two only apply when the config has exactly one server; otherwise the file is ignored with
 a warning. For several servers, use the map. `resultType` must be missing or `"complete"`, and the
@@ -394,8 +403,7 @@ python tools/release_check.py   # before a release
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities privately: [SECURITY.md](SECURITY.md).
-Every format and design assumption, with its verification status and source:
-[docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md). Changes: [CHANGELOG.md](CHANGELOG.md).
+Every format and design assumption, with its verification status and source: [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md). How `apl` compares with existing MCP scanners: [docs/competitor-teardown.md](docs/competitor-teardown.md). Changes: [CHANGELOG.md](CHANGELOG.md).
 
 Not yet built: rules APL-003 and APL-009, live tool listing, and an LLM reasoning layer.
 

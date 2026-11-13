@@ -4,7 +4,7 @@ All notable changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.1.0 - unreleased
+## 0.1.0 - 2026-11-13
 
 First release. Read-only: no `apply` command, no writes to Entra, no connection to MCP servers.
 
@@ -38,6 +38,8 @@ First release. Read-only: no `apply` command, no writes to Entra, no connection 
 - `--anonymise-names` for display, server, agent and owner names.
 - Guard harness (`tools/mutation/`): 94 output guards, each broken on purpose and caught by a test.
 - Release check (`tools/release_check.py`).
+- README: `tools/list` multi-server format, early-release status line, privacy summary, and link to `docs/competitor-teardown.md`.
+- Mutation harness: skip `tests/test_gitleaks_config.py` and `tests/test_release_check.py` (both read the real repo and fail inside the throwaway copy by design).
 - `LICENSE` (Apache-2.0), `SECURITY.md`, `CONTRIBUTING.md`, `docs/THREAT_MODEL.md`,
   `docs/ASSUMPTIONS.md`.
 

@@ -1,13 +1,40 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "agent-permission-linter"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Detect AI agents holding more power than their declared task needs."
+readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Shreyas Amaranath" }]
+keywords = [
+  "mcp",
+  "model-context-protocol",
+  "ai-agents",
+  "least-privilege",
+  "security",
+  "linter",
+  "entra",
+  "microsoft-graph",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = [
   "typer>=0.12",
   "pydantic>=2.6",
@@ -18,11 +45,34 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
 
+[project.urls]
+Homepage = "https://github.com/Shrebibelagur/agent-permission-linter"
+Source = "https://github.com/Shrebibelagur/agent-permission-linter"
+Issues = "https://github.com/Shrebibelagur/agent-permission-linter/issues"
+
 [project.scripts]
 apl = "apl.cli:app"
 
+# The wheel holds only the apl package: nothing at runtime reads tests/, docs/ or tools/.
 [tool.hatch.build.targets.wheel]
 packages = ["src/apl"]
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+# The sdist carries the tests and fixtures so a downstream build can run pytest, but not
+# local or CI-only files.
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src/apl",
+  "/tests",
+  "/docs",
+  "/README.md",
+  "/LICENSE",
+  "/CHANGELOG.md",
+  "/SECURITY.md",
+  "/CONTRIBUTING.md",
+  "/pyproject.toml",
+]
+exclude = ["**/__pycache__", "**/*.pyc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
