@@ -12,6 +12,8 @@ Next, in this order:
 5. Report prompt-injection warnings as findings in the report; currently a parser warning only (Markdown/JSON); not a finding, not in SARIF. (from competitor teardown 2026-11-04)
 6. Check for plaintext secrets in MCP client configs. (from competitor teardown 2026-11-04)
 7. Check for npx -y silent execution and unpinned package versions. (from competitor teardown 2026-11-04)
+8. Name unused tools-file keys ("tools file entry 'other' matches no server"). (from Fri 13 batch)
+9. Add "tools loaded: N" per server to the report. (from Fri 13 batch)
 
 Known limits to put in the threat model: rename evasion (C3), trusted agreement (E7),
 coarse "network" capability, parameters hidden in $ref/anyOf/oneOf/allOf, live mode untested.

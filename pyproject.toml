@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-permission-linter"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Detect AI agents holding more power than their declared task needs."
 readme = "README.md"
 requires-python = ">=3.11"
