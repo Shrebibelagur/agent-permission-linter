@@ -19,3 +19,23 @@ Known limits to put in the threat model: rename evasion (C3), trusted agreement 
 coarse "network" capability, parameters hidden in $ref/anyOf/oneOf/allOf, live mode untested.
 
 To resume: cd to the project folder, activate .venv, git pull, then run claude.
+
+## Privacy and supply-chain roadmap (from 2026-11-14 threat-model review)
+
+10. Extend redactor to agent.yaml free-text fields (purpose, justification, env_keys). 0.2.0.
+11. Add --extra-secret-patterns flag for user-supplied regex. 0.2.0.
+12. Integrate gitleaks for broader secret-shape coverage. 0.3.0.
+13. Add --strict flag: refuse --show-ids / --show-urls, no raw IDs or URLs ever. 0.2.0.
+14. Record pseudonymised tenant ID in report header. 0.3.0.
+15. Warn or refuse if TENANT_ID differs from a previously-seen tenant on the same install. 0.3.0.
+16. Store salt in OS keyring (Windows Credential Manager, macOS Keychain, libsecret). File fallback for CI. 0.3.0.
+17. Argon2 or scrypt KDF on salt load; apl id-salt rotate command. 0.4.0.
+
+## Supply-chain hardening
+
+18. CycloneDX SBOM output on release. 0.2.0.
+19. Sigstore signing on release wheels and tags via GitHub Actions. 0.2.0.
+20. Reproducible build process. 0.3.0+.
+21. Private vulnerability reporting enabled on repo. Done 2026-11-16.
+22. Vulnerability disclosure process in SECURITY.md (response SLA, PGP key, acknowledgements). 0.2.0.
+23. Third-party security audit. 1.0+ territory.
